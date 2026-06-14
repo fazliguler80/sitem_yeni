@@ -4,7 +4,8 @@ from django.contrib.auth import views as auth_views
 from . import portal_views
 
 urlpatterns = [
-    path('site-degistir/<int:site_id>/', views.portal_site_degistir, name='portal_site_degistir'),
+    # Site değiştirme (portal_views içinde)
+    path('site-degistir/<int:site_id>/', portal_views.portal_site_degistir, name='portal_site_degistir'),
     
     # Giriş/Çıkış
     path('login/', portal_views.portal_login, name='portal_login'),
@@ -13,7 +14,7 @@ urlpatterns = [
     # Ana Sayfa
     path('', portal_views.portal_ana_sayfa, name='portal_ana'),
     
-    # DEPOZİTO SAYFALARI (YENİ)
+    # DEPOZİTO SAYFALARI
     path('depozito/', portal_views.depozito_gecmisi, name='depozito_gecmisi'),
     path('depozito/<int:depozito_id>/', portal_views.depozito_detay, name='depozito_detay'),
     
