@@ -1,0 +1,74 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block nav-global %}
+<div style="display: inline-block; margin-left: 20px;">
+    <a href="/admin/raporlar/" style="color: white; text-decoration: none; padding: 8px 15px; background: #2a5298; border-radius: 4px; margin-right: 10px;">
+        📊 RAPORLAR
+    </a>
+    <a href="/admin/raporlar/gelir-gider/" style="color: white; text-decoration: none; padding: 8px 15px; background: #28a745; border-radius: 4px; margin-right: 10px;">
+        💰 Gelir/Gider
+    </a>
+    <a href="/admin/raporlar/banka-hareketleri/" style="color: white; text-decoration: none; padding: 8px 15px; background: #17a2b8; border-radius: 4px;">
+        🏦 Banka
+    </a>
+    
+    <!-- ✅ SİTE SEÇİCİ DROPDOWN (YENİ) -->
+    <div style="display: inline-flex; align-items: center; gap: 10px; margin-left: 20px; background: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 5px;">
+        <span>🏢 Site:</span>
+        <select id="site_selector" style="padding: 5px; border-radius: 3px;">
+            <option value="">-- Site Seçin --</option>
+            {% for site in sites %}
+            <option value="{{ site.id }}" {% if aktif_site_id|stringformat:"s" == site.id|stringformat:"s" %}selected{% endif %}>
+                {{ site.adi }}
+            </option>
+            {% endfor %}
+        </select>
+        <button type="button" id="site_degistir" style="background: #ffc107; color: #333; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">
+            🔄 Değiştir
+        </button>
+    </div>
+</div>
+{{ block.super }}
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<script>
+// Sayfa yüklendiğinde Go butonunu bul ve değiştir
+document.addEventListener('DOMContentLoaded', function() {
+    // Tüm butonları kontrol et
+    var buttons = document.querySelectorAll('button');
+    for (var i = 0; i < buttons.length; i++) {
+        if (buttons[i].innerText === 'Go') {
+            buttons[i].innerText = 'Çalıştır';
+            console.log('Buton değiştirildi!');
+        }
+    }
+    
+    // Site seçici butonu
+    var siteDegistir = document.getElementById('site_degistir');
+    if (siteDegistir) {
+        siteDegistir.addEventListener('click', function() {
+            var siteId = document.getElementById('site_selector').value;
+            if (siteId) {
+                window.location.href = '/admin/site-degistir/' + siteId + '/';
+            } else {
+                alert('Lütfen bir site seçin!');
+            }
+        });
+    }
+});
+
+// Dinamik değişiklikleri izle (sayfa değişirse)
+var observer = new MutationObserver(function() {
+    var buttons = document.querySelectorAll('button');
+    for (var i = 0; i < buttons.length; i++) {
+        if (buttons[i].innerText === 'Go') {
+            buttons[i].innerText = 'Çalıştır';
+        }
+    }
+});
+observer.observe(document.body, { childList: true, subtree: true });
+</script>
+{% endblock %}
