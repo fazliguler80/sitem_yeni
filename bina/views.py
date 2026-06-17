@@ -22,11 +22,11 @@ class AdminLoginView(LoginView):
     template_name = 'admin/login.html'
     
     def form_valid(self, form):
+        # Kullanıcıyı oturum açtır
         response = super().form_valid(form)
         
-        # Login olduktan sonra site bilgisini kontrol et
+        # Site seçili ise admin paneline yönlendir
         if self.request.session.get('aktif_site_id'):
-            # Site seçili ise doğrudan admin paneline yönlendir
             return redirect('/admin/')
         else:
             # Site seçili değilse ana sayfaya yönlendir

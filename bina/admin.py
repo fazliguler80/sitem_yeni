@@ -66,16 +66,14 @@ class MultiSiteAdminMixin:
         
         # Site seçilmediyse
         if not request.session.get('aktif_site_id'):
-            # İlk siteyi otomatik seç
             from bina.models import Site
             ilk_site = Site.objects.filter(aktif=True).first()
             if ilk_site:
                 request.session['aktif_site_id'] = ilk_site.id
+                return redirect('/admin/')
             else:
-                # Hiç site yoksa site ekleme sayfasına yönlendir
                 return redirect('/admin/bina/site/add/')
         
-        # Site seçili ise normal listeyi göster
         return super().changelist_view(request, extra_context=extra_context)
 
 class TarihFiltresiMixin:
