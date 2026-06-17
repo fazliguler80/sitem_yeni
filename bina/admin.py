@@ -34,6 +34,7 @@ from datetime import date
 from bina.models import Site
 from django.contrib.auth.views import LoginView
 from django.urls import reverse_lazy
+from django.shortcuts import redirect
 
 from .models import (
     SiteAyarlari, Blok, Daire, Kisi, DaireIliskisi, 
@@ -53,18 +54,28 @@ class MultiSiteAdminMixin:
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if request.user.is_superuser:
-            # Superuser tüm siteleri görebilir
             return qs
         if request.session.get('aktif_site_id'):
             return qs.filter(site_id=request.session.get('aktif_site_id'))
-        return qs.none()  # Site seçilmediyse hiçbir şey gösterme
+        return qs.none()
 
     def changelist_view(self, request, extra_context=None):
-        # Site seçilmediyse uyarı göster
-        if not request.session.get('aktif_site_id') and not request.user.is_superuser:
-            from django.contrib import messages
-            messages.warning(request, 'Lütfen önce bir site seçin! Ana sayfaya gidin.')
-            return redirect('/')
+        # Kullanıcı giriş yapmamışsa login sayfasına yönlendir
+        if not request.user.is_authenticated:
+            return redirect('/admin/login/')
+        
+        # Site seçilmediyse
+        if not request.session.get('aktif_site_id'):
+            # İlk siteyi otomatik seç
+            from bina.models import Site
+            ilk_site = Site.objects.filter(aktif=True).first()
+            if ilk_site:
+                request.session['aktif_site_id'] = ilk_site.id
+            else:
+                # Hiç site yoksa site ekleme sayfasına yönlendir
+                return redirect('/admin/bina/site/add/')
+        
+        # Site seçili ise normal listeyi göster
         return super().changelist_view(request, extra_context=extra_context)
 
 class TarihFiltresiMixin:
@@ -2153,7 +2164,6 @@ class DepozitoAdmin(MultiSiteAdminMixin, admin.ModelAdmin):
     
     def get_urls(self):
         from django.urls import path
-        from django.shortcuts import redirect
         from django.contrib import messages
         from django.http import HttpResponseRedirect
         from django.urls import reverse
