@@ -23,14 +23,20 @@ class AdminLoginView(LoginView):
     
     def form_valid(self, form):
         response = super().form_valid(form)
-        # Login olduktan sonra session'daki site bilgisini kontrol et
+        
+        # Login olduktan sonra site bilgisini kontrol et
         if self.request.session.get('aktif_site_id'):
-            # Site seçili ise admin paneline yönlendir
-            self.request.session['aktif_site_id'] = self.request.session.get('aktif_site_id')
+            # Site seçili ise doğrudan admin paneline yönlendir
+            return redirect('/admin/')
         else:
             # Site seçili değilse ana sayfaya yönlendir
             return redirect('/')
-        return response
+    
+    def get_success_url(self):
+        # Başarılı giriş sonrası yönlendirme
+        if self.request.session.get('aktif_site_id'):
+            return '/admin/'
+        return '/'
 
 @login_not_required
 def portal_site_degistir(request, site_id):
