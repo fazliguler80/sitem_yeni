@@ -25,20 +25,20 @@ def site_degistir(request, site_id):
     return redirect(next_url)
 
 
-'''class AdminLoginView(LoginView):
-    template_name = 'admin/login.html'
+#class AdminLoginView(LoginView):
+ #   template_name = 'admin/login.html'
     
-    def form_valid(self, form):
+  #  def form_valid(self, form):
         # Kullanıcıyı oturum açtır
-        response = super().form_valid(form)
+   #     response = super().form_valid(form)
         
         # Her durumda admin paneline yönlendir
-        return redirect('/admin/')
+    #    return redirect('/admin/')
     
-    def get_success_url(self):
+    #def get_success_url(self):
         # Her durumda admin paneline yönlendir
-        return '/admin/'
-'''
+     #   return '/admin/'
+
 @login_not_required
 def portal_site_degistir(request, site_id):
     """Portal için site seçici"""
