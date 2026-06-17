@@ -2726,6 +2726,11 @@ class SiteAdmin(admin.ModelAdmin):
     list_display = ('adi', 'slug', 'aktif')
     prepopulated_fields = {'slug': ('adi',)}
 
+class UserAdmin(admin.ModelAdmin):
+    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'is_active')
+    search_fields = ('username', 'email', 'first_name', 'last_name')
+    list_filter = ('is_staff', 'is_active', 'is_superuser')
+
 # Diğer modeller
 admin_site.register(SiteAyarlari)
 admin_site.register(Blok, BlokAdmin)
@@ -2743,3 +2748,4 @@ admin_site.register(DepozitoHareket, DepozitoHareketAdmin)
 admin_site.register(Fatura)
 admin_site.register(BankaHareket, BankaHareketAdmin)
 admin_site.register(Site, SiteAdmin)
+admin_site.register(User, UserAdmin)
