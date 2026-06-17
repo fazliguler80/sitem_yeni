@@ -2722,6 +2722,10 @@ class DepozitoAdmin(MultiSiteAdminMixin, admin.ModelAdmin):
     list_filter = ('site', 'durum')
     search_fields = ('daire__daire_no', 'kisi__ad_soyad')
 
+class SiteAdmin(admin.ModelAdmin):
+    list_display = ('adi', 'slug', 'aktif')
+    prepopulated_fields = {'slug': ('adi',)}
+
 # Diğer modeller
 admin_site.register(SiteAyarlari)
 admin_site.register(Blok, BlokAdmin)
