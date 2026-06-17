@@ -1,5 +1,4 @@
 # portal/views.py veya ana views.py
-# portal/views.py veya ana views.py
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, login_not_required
 from django.contrib.admin.views.decorators import staff_member_required
@@ -11,7 +10,6 @@ from django.contrib.admin.views.decorators import staff_member_required
 
 @staff_member_required
 def site_degistir(request, site_id):
-    from bina.models import Site
     try:
         site = Site.objects.get(id=site_id, aktif=True)
         request.session['aktif_site_id'] = site.id

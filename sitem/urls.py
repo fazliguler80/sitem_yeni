@@ -6,10 +6,10 @@ from bina.admin import admin_site
 from bina import views
 
 urlpatterns = [
+    path('admin/site-degistir/<int:site_id>/', views.site_degistir, name='site_degistir'),
     path('', views.home_page, name='home'),
     path('admin/', admin_site.urls),
     path('portal/', include('bina.portal_urls')),  # bina.portal_urls'i include et
-    path('admin/site-degistir/<int:site_id>/', views.site_degistir, name='site_degistir'),
 ]
 
 # Media dosyaları için (debug modunda)
