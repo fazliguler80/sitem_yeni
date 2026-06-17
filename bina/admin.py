@@ -48,18 +48,22 @@ from django.utils.html import format_html
 from datetime import datetime, timedelta
 
 class MultiSiteAdminMixin:
-    """Site bazlı filtreleme yapan admin mixin"""
-    
     def get_queryset(self, request):
         qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            # Superuser tüm siteleri görebilir
+            return qs
         if request.session.get('aktif_site_id'):
             return qs.filter(site_id=request.session.get('aktif_site_id'))
-        return qs
-    
-    def save_model(self, request, obj, form, change):
-        if not obj.site_id and request.session.get('aktif_site_id'):
-            obj.site_id = request.session.get('aktif_site_id')
-        super().save_model(request, obj, form, change)
+        return qs.none()  # Site seçilmediyse hiçbir şey gösterme
+
+    def changelist_view(self, request, extra_context=None):
+        # Site seçilmediyse uyarı göster
+        if not request.session.get('aktif_site_id') and not request.user.is_superuser:
+            from django.contrib import messages
+            messages.warning(request, 'Lütfen önce bir site seçin! Ana sayfaya gidin.')
+            return redirect('/')
+        return super().changelist_view(request, extra_context=extra_context)
 
 class TarihFiltresiMixin:
     """Admin liste ekranlarına hızlı tarih filtresi ekleyen mixin"""
