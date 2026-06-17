@@ -10,24 +10,32 @@ from django.contrib.auth.views import LoginView
 
 @staff_member_required
 def site_degistir(request, site_id):
+    """Admin paneli için site seçici - session'a kaydeder"""
     try:
         site = Site.objects.get(id=site_id, aktif=True)
         request.session['aktif_site_id'] = site.id
+        request.session['aktif_site_adi'] = site.adi
+        print(f"✅ SESSION KAYDEDİLDİ: Site ID={site.id}, Adi={site.adi}")
     except Site.DoesNotExist:
+        print(f"❌ Site bulunamadı: ID={site_id}")
         pass
-    return redirect(request.META.get('HTTP_REFERER', '/admin/'))
+    
+    # Yönlendirme yapılacak adresi al (next parametresi)
+    next_url = request.GET.get('next', '/admin/')
+    return redirect(next_url)
 
 
 class AdminLoginView(LoginView):
     template_name = 'admin/login.html'
     
     def form_valid(self, form):
-        print("=== AdminLoginView.form_valid ÇALIŞTI ===")
-        print(f"aktif_site_id: {self.request.session.get('aktif_site_id')}")
-        
         response = super().form_valid(form)
         
-        if self.request.session.get('aktif_site_id'):
+        # Session'dan site ID'sini al
+        site_id = self.request.session.get('aktif_site_id')
+        print(f"AdminLoginView - aktif_site_id: {site_id}")
+        
+        if site_id:
             print("Site seçili, /admin/ yönlendiriliyor")
             return redirect('/admin/')
         else:
@@ -35,7 +43,6 @@ class AdminLoginView(LoginView):
             return redirect('/')
     
     def get_success_url(self):
-        print(f"get_success_url: aktif_site_id={self.request.session.get('aktif_site_id')}")
         if self.request.session.get('aktif_site_id'):
             return '/admin/'
         return '/'
