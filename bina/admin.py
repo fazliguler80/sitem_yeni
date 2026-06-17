@@ -32,6 +32,8 @@ from django.conf import settings
 from django.contrib.admin import SimpleListFilter
 from datetime import date
 from bina.models import Site
+from django.contrib.auth.views import LoginView
+from django.urls import reverse_lazy
 
 from .models import (
     SiteAyarlari, Blok, Daire, Kisi, DaireIliskisi, 

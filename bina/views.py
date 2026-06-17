@@ -6,6 +6,7 @@ from django.contrib import messages
 from bina.models import DaireKullanici, Depozito, DepozitoHareket, Site
 from django.shortcuts import redirect
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.views import LoginView
 
 @staff_member_required
 def site_degistir(request, site_id):
@@ -15,6 +16,21 @@ def site_degistir(request, site_id):
     except Site.DoesNotExist:
         pass
     return redirect(request.META.get('HTTP_REFERER', '/admin/'))
+
+
+class AdminLoginView(LoginView):
+    template_name = 'admin/login.html'
+    
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        # Login olduktan sonra session'daki site bilgisini kontrol et
+        if self.request.session.get('aktif_site_id'):
+            # Site seçili ise admin paneline yönlendir
+            self.request.session['aktif_site_id'] = self.request.session.get('aktif_site_id')
+        else:
+            # Site seçili değilse ana sayfaya yönlendir
+            return redirect('/')
+        return response
 
 @login_not_required
 def portal_site_degistir(request, site_id):
