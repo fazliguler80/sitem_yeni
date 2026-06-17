@@ -63,7 +63,7 @@ class MultiSiteAdminMixin:
         # Kullanıcı giriş yapmamışsa login sayfasına yönlendir
         if not request.user.is_authenticated:
             return redirect('/admin/login/')
-        
+
         # Site seçilmediyse
         if not request.session.get('aktif_site_id'):
             from bina.models import Site
@@ -73,7 +73,7 @@ class MultiSiteAdminMixin:
                 return redirect('/admin/')
             else:
                 return redirect('/admin/bina/site/add/')
-        
+
         return super().changelist_view(request, extra_context=extra_context)
 
 class TarihFiltresiMixin:
