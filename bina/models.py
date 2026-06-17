@@ -33,22 +33,49 @@ GIDER_HESAP_TIPI = [
 ]
 
 class Site(models.Model):
-    """Birden fazla site yönetimi için"""
     adi = models.CharField(max_length=100, verbose_name="Site Adı")
-    slug = models.SlugField(unique=True, verbose_name="URL Kodu", help_text="Örn: sefa4-sitesi")
+    slug = models.SlugField(unique=True, verbose_name="URL Kodu")
     aciklama = models.TextField(blank=True, verbose_name="Açıklama")
     aktif = models.BooleanField(default=True, verbose_name="Aktif")
-    
-    # İletişim bilgileri
     adres = models.TextField(blank=True, verbose_name="Adres")
     telefon = models.CharField(max_length=20, blank=True, verbose_name="Telefon")
     email = models.EmailField(blank=True, verbose_name="E-posta")
     
-    # Siteye özel ayarlar (isteğe bağlı)
-    logo = models.ImageField(upload_to='site_logos/', blank=True, null=True, verbose_name="Logo")
+    # Site admin kullanıcısı (ForeignKey)
+    admin_user = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        verbose_name="Site Admini",
+        related_name='yönettiği_siteler'
+    )
     
     def __str__(self):
         return self.adi
+    
+    def save(self, *args, **kwargs):
+        # Yeni site ekleniyorsa ve admin_user atanmamışsa
+        if not self.pk and not self.admin_user:
+            # Site admin kullanıcısı oluştur
+            username = self.slug.replace('-', '_') + '_admin'
+            password = User.objects.make_random_password(length=12)
+            email = self.email or f"{self.slug}@nokrat.com"
+            
+            user = User.objects.create_user(
+                username=username,
+                password=password,
+                email=email,
+                first_name=f"{self.adi} Admini",
+                is_staff=True,
+                is_active=True
+            )
+            self.admin_user = user
+            
+            # TODO: Şifreyi e-posta ile gönder (isteğe bağlı)
+            # send_mail(...)
+        
+        super().save(*args, **kwargs)
     
     class Meta:
         verbose_name = "Site"

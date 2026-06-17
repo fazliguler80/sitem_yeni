@@ -2723,8 +2723,21 @@ class DepozitoAdmin(MultiSiteAdminMixin, admin.ModelAdmin):
     search_fields = ('daire__daire_no', 'kisi__ad_soyad')
 
 class SiteAdmin(admin.ModelAdmin):
-    list_display = ('adi', 'slug', 'aktif')
+    list_display = ('adi', 'slug', 'aktif', 'admin_user')
     prepopulated_fields = {'slug': ('adi',)}
+    
+    fieldsets = (
+        ('Site Bilgileri', {
+            'fields': ('adi', 'slug', 'aciklama', 'aktif')
+        }),
+        ('İletişim Bilgileri', {
+            'fields': ('adres', 'telefon', 'email')
+        }),
+        ('Admin Kullanıcısı', {
+            'fields': ('admin_user',),
+            'description': 'Bu siteye ait admin kullanıcısı. Site eklenirken otomatik oluşturulur.'
+        }),
+    )
 
 class UserAdmin(admin.ModelAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'is_active')
