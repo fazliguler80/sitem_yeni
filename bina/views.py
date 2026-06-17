@@ -3,8 +3,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, login_not_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
-from bina.models import DaireKullanici, Depozito, DepozitoHareket
-
+from bina.models import DaireKullanici, Depozito, DepozitoHareket, Site
 from django.shortcuts import redirect
 from django.contrib.admin.views.decorators import staff_member_required
 
