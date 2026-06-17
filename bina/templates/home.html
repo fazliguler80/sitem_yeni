@@ -128,10 +128,11 @@
         const adminBtn = document.getElementById('adminBtn');
         const portalBtn = document.getElementById('portalBtn');
         const errorMsg = document.getElementById('errorMsg');
-        
+
         function updateButtons() {
             const selectedSite = siteSelect.value;
             if (selectedSite) {
+                // Admin girişi: doğrudan site_degistir URL'ine git
                 adminBtn.href = '/admin/site-degistir/' + selectedSite + '/?next=/admin/';
                 portalBtn.href = '/portal/site-degistir/' + selectedSite + '/?next=/portal/login/';
                 adminBtn.classList.remove('btn-disabled');
@@ -144,7 +145,7 @@
                 portalBtn.classList.add('btn-disabled');
             }
         }
-        
+
         siteSelect.addEventListener('change', updateButtons);
         updateButtons();
     </script>
