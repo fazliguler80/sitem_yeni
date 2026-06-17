@@ -26,6 +26,7 @@ ALLOWED_HOSTS = [
     'nokrat.com',
     'www.nokrat.com',
     'sitem-kx2q.onrender.com',
+    'sitem-yeni.onrender.com',
 ]
 
 # CSRF ayarları
