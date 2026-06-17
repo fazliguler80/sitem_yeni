@@ -31,6 +31,7 @@ from django.core.files.base import ContentFile
 from django.conf import settings
 from django.contrib.admin import SimpleListFilter
 from datetime import date
+from bina.models import Site
 
 from .models import (
     SiteAyarlari, Blok, Daire, Kisi, DaireIliskisi, 
@@ -2737,3 +2738,4 @@ admin_site.register(Depozito, DepozitoAdmin)
 admin_site.register(DepozitoHareket, DepozitoHareketAdmin)
 admin_site.register(Fatura)
 admin_site.register(BankaHareket, BankaHareketAdmin)
+admin_site.register(Site, SiteAdmin)
