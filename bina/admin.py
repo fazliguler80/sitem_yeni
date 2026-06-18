@@ -146,7 +146,7 @@ class TarihFiltresiMixin:
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
-            path('tarih-filtrele/', self.admin.site.admin_view(self.tarih_filtrele_view), name=f'{self.model._meta.model_name}_tarih_filtrele'),
+            path('tarih-filtrele/', self.admin_site.admin_view(self.tarih_filtrele_view), name=f'{self.model._meta.model_name}_tarih_filtrele'),
         ]
         return custom_urls + urls
     
