@@ -146,7 +146,7 @@ class TarihFiltresiMixin:
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
-            path('tarih-filtrele/', self.admin_site.admin_view(self.tarih_filtrele_view), name=f'{self.model._meta.model_name}_tarih_filtrele'),
+            path('tarih-filtrele/', self.admin.site.admin_view(self.tarih_filtrele_view), name=f'{self.model._meta.model_name}_tarih_filtrele'),
         ]
         return custom_urls + urls
     
@@ -1929,7 +1929,7 @@ class GiderAdmin(MultiSiteAdminMixin, TarihFiltresiMixin, admin.ModelAdmin):
         from django.urls import path
         urls = super().get_urls()
         custom_urls = [
-            path('<int:gider_id>/taksitlendir/', self.admin_site.admin_view(self.taksitlendir_sayfasi), name='gider_taksitlendir'),
+            path('<int:gider_id>/taksitlendir/', self.admin.site.admin_view(self.taksitlendir_sayfasi), name='gider_taksitlendir'),
         ]
         return custom_urls + urls
 
@@ -2168,7 +2168,7 @@ class DepozitoAdmin(MultiSiteAdminMixin, admin.ModelAdmin):
         
         urls = super().get_urls()
         custom_urls = [
-            path('<int:depozito_id>/hareket-ekle/', self.admin_site.admin_view(self.depozito_hareket_ekle), name='depozito_hareket_ekle'),
+            path('<int:depozito_id>/hareket-ekle/', self.admin.site.admin_view(self.depozito_hareket_ekle), name='depozito_hareket_ekle'),
         ]
         return custom_urls + urls
     
@@ -2459,9 +2459,9 @@ admin.site.index_title = "YÖNETİM PANELİNE HOŞ GELDİNİZ"
 
 # Modelleri kaydet - SAKIN @admin.register KULLANMA!
 # Modelleri kaydet - ÖNCE AsgariUcret ve MaasBordrosu
-admin_site.register(AsgariUcret, AsgariUcretAdmin)
-admin_site.register(MaasBordrosu, MaasBordrosuAdmin)
-admin_site.register(Personel)
+admin.site.register(AsgariUcret, AsgariUcretAdmin)
+admin.site.register(MaasBordrosu, MaasBordrosuAdmin)
+admin.site.register(Personel)
 
 from django.urls import path
 from django.shortcuts import get_object_or_404, redirect
@@ -2700,7 +2700,7 @@ Not: Şifrenizi bilmiyorsanız yöneticiden yeni şifre talep edebilirsiniz.
         
         return redirect('admin:bina_dairekullanici_changelist')
 
-admin_site.register(DaireKullanici, DaireKullaniciAdmin)
+admin.site.register(DaireKullanici, DaireKullaniciAdmin)
 
 # ========== SITE BAZLI ADMIN SINIFLARI ==========
 
