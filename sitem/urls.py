@@ -10,7 +10,7 @@ urlpatterns = [
     path('admin/login/', AdminLoginView.as_view(), name='admin_login'),
     path('admin/site-degistir/<int:site_id>/', views.site_degistir, name='site_degistir'),
     path('', views.home_page, name='home'),
-    path('admin/', admin_site.urls),
+    path('admin/', admin.site.urls),
     path('portal/', include('bina.portal_urls')),  # bina.portal_urls'i include et
 ]
 
