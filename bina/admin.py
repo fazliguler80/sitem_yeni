@@ -2673,7 +2673,7 @@ Not: Şifrenizi bilmiyorsanız yöneticiden yeni şifre talep edebilirsiniz.
 
 # ==================== KULLANICI ADMIN (EKLENDİ) ====================
 from django.contrib.auth.admin import UserAdmin, GroupAdmin
-from django.contrib.auth.models import User, Group
+from django.contrib.auth.models import User, Group, Permission
 from django.contrib.contenttypes.models import ContentType
 
 # ==================== KULLANICI ADMIN ====================
