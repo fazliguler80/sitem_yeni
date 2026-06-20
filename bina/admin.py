@@ -2720,6 +2720,8 @@ class CustomUserAdmin(UserAdmin):
         })
     toplu_grup_ata.short_description = 'Seçili kullanıcıları gruba ata'
 
+from django.template.loader import render_to_string
+
 # ==================== GRUP ADMIN ====================
 class CustomGroupAdmin(GroupAdmin):
     """Gelişmiş Grup Yönetimi"""
@@ -2749,20 +2751,7 @@ class CustomGroupAdmin(GroupAdmin):
         }),
         ('Yetkiler (Permissions)', {
             'fields': ('permissions',),
-            'description': """
-            <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #2196F3;">
-                <strong style="color: #1976D2;">💡 İpucu:</strong>
-                <ul style="margin: 8px 0; padding-left: 20px; color: #333;">
-                    <li><code style="background: #fff; padding: 2px 6px; border-radius: 3px;">add_</code> → <strong>Ekleme</strong> izni</li>
-                    <li><code style="background: #fff; padding: 2px 6px; border-radius: 3px;">change_</code> → <strong>Düzenleme</strong> izni</li>
-                    <li><code style="background: #fff; padding: 2px 6px; border-radius: 3px;">delete_</code> → <strong>Silme</strong> izni</li>
-                    <li><code style="background: #fff; padding: 2px 6px; border-radius: 3px;">view_</code> → <strong>Görüntüleme</strong> izni</li>
-                </ul>
-                <div style="background: #fff; padding: 8px 12px; border-radius: 4px; margin-top: 8px; border: 1px solid #ddd;">
-                    <strong>📌 Örnek:</strong> <code>bina | aidat | Can change aidat</code> = Aidatları <strong>düzenleyebilir</strong>.
-                </div>
-            </div>
-            """,
+            'description': render_to_string('admin/group_description.html'),
             'classes': ('wide',)
         }),
     )
