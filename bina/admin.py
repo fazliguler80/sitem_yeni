@@ -2750,15 +2750,17 @@ class CustomGroupAdmin(GroupAdmin):
         ('Yetkiler (Permissions)', {
             'fields': ('permissions',),
             'description': """
-            <div style="background: #fff3cd; padding: 10px; border-radius: 5px; margin: 10px 0;">
-                <strong>💡 İpucu:</strong> 
-                <ul style="margin: 5px 0; padding-left: 20px;">
-                    <li><strong>add_</strong> → Ekleme izni</li>
-                    <li><strong>change_</strong> → Düzenleme izni</li>
-                    <li><strong>delete_</strong> → Silme izni</li>
-                    <li><strong>view_</strong> → Görüntüleme izni</li>
+            <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #2196F3;">
+                <strong style="color: #1976D2;">💡 İpucu:</strong>
+                <ul style="margin: 8px 0; padding-left: 20px; color: #333;">
+                    <li><code style="background: #fff; padding: 2px 6px; border-radius: 3px;">add_</code> → <strong>Ekleme</strong> izni</li>
+                    <li><code style="background: #fff; padding: 2px 6px; border-radius: 3px;">change_</code> → <strong>Düzenleme</strong> izni</li>
+                    <li><code style="background: #fff; padding: 2px 6px; border-radius: 3px;">delete_</code> → <strong>Silme</strong> izni</li>
+                    <li><code style="background: #fff; padding: 2px 6px; border-radius: 3px;">view_</code> → <strong>Görüntüleme</strong> izni</li>
                 </ul>
-                Örnek: <code>bina | aidat | Can change aidat</code> = Aidatları düzenleyebilir.
+                <div style="background: #fff; padding: 8px 12px; border-radius: 4px; margin-top: 8px; border: 1px solid #ddd;">
+                    <strong>📌 Örnek:</strong> <code>bina | aidat | Can change aidat</code> = Aidatları <strong>düzenleyebilir</strong>.
+                </div>
             </div>
             """,
             'classes': ('wide',)
