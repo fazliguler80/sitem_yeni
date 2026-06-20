@@ -1653,7 +1653,7 @@ class AsgariUcretAdmin(admin.ModelAdmin):
     list_display = ['yil', 'brut_ucret', 'isci_sgk_payi', 'isveren_sgk_payi']
     list_editable = ['brut_ucret']
 
-class GiderAdmin(MultiSiteAdminMixin, TarihFiltresiMixin, admin.ModelAdmin):
+class GiderAdmin(TarihFiltresiMixin, admin.ModelAdmin):
     tarih_alan = 'tarih'
     list_display = ('tip', 'tutar', 'tarih', 'hesap_tipi', 'blok', 'muaf_daire_sayisi', 'aciklama', 'taksitlendir_button')
     list_filter = ('tip', 'tarih', 'hesap_tipi', 'blok')
