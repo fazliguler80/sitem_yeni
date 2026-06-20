@@ -1925,7 +1925,7 @@ class GiderAdmin(MultiSiteAdminMixin, TarihFiltresiMixin, admin.ModelAdmin):
         from django.urls import path
         urls = super().get_urls()
         custom_urls = [
-            path('<int:gider_id>/taksitlendir/', self.admin.site.admin_view(self.taksitlendir_sayfasi), name='gider_taksitlendir'),
+            path('<int:gider_id>/taksitlendir/', self.admin_site.admin_view(self.taksitlendir_sayfasi), name='gider_taksitlendir'),
         ]
         return custom_urls + urls
 
@@ -2164,7 +2164,7 @@ class DepozitoAdmin(MultiSiteAdminMixin, admin.ModelAdmin):
         
         urls = super().get_urls()
         custom_urls = [
-            path('<int:depozito_id>/hareket-ekle/', self.admin.site.admin_view(self.depozito_hareket_ekle), name='depozito_hareket_ekle'),
+            path('<int:depozito_id>/hareket-ekle/', self.admin_site.admin_view(self.depozito_hareket_ekle), name='depozito_hareket_ekle'),
         ]
         return custom_urls + urls
     
