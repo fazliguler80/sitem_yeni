@@ -2738,7 +2738,6 @@ class CustomGroupAdmin(GroupAdmin):
     permission_count.short_description = '🔑 İzin Sayısı'
     
     def app_list(self, obj):
-        """Grubun hangi uygulamalarda izni olduğunu gösterir"""
         apps = set()
         for perm in obj.permissions.all():
             apps.add(perm.content_type.app_label)
@@ -2751,7 +2750,7 @@ class CustomGroupAdmin(GroupAdmin):
         }),
         ('Yetkiler (Permissions)', {
             'fields': ('permissions',),
-            'description': render_to_string('admin/group_description.html'),
+            'description': render_to_string('admin/group_description.html'),  # Dosya adı değişti!
             'classes': ('wide',)
         }),
     )
