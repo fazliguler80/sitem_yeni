@@ -2670,17 +2670,18 @@ Not: Şifrenizi bilmiyorsanız yöneticiden yeni şifre talep edebilirsiniz.
         return redirect('admin:bina_dairekullanici_changelist')
 
 # ==================== KULLANICI ADMIN (EKLENDİ) ====================
-from django.contrib.auth.admin import UserAdmin
-from django.contrib.auth.models import User
+from django.contrib.auth.admin import UserAdmin, GroupAdmin
+from django.contrib.auth.models import User, Group
+from django.contrib.contenttypes.models import ContentType
 
+# ==================== KULLANICI ADMIN ====================
 class CustomUserAdmin(UserAdmin):
     """Kullanıcı yönetimi için özel admin"""
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'is_active', 'date_joined')
-    list_filter = ('is_staff', 'is_active', 'is_superuser', 'groups')
+    list_filter = ('is_staff', 'is_active', 'is_superuser', 'groups')  # groups eklendi
     search_fields = ('username', 'email', 'first_name', 'last_name')
     ordering = ('-date_joined',)
     
-    # Kullanıcı detay sayfasında gösterilecek alanlar
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
         ('Kişisel Bilgiler', {'fields': ('first_name', 'last_name', 'email')}),
@@ -2688,18 +2689,41 @@ class CustomUserAdmin(UserAdmin):
         ('Önemli Tarihler', {'fields': ('last_login', 'date_joined')}),
     )
     
-    # Liste ekranında düzenlenebilir alanlar
     list_editable = ('is_staff', 'is_active')
+    
+    # Toplu işlemler için
+    actions = ['toplu_grup_ata']
+    
+    def toplu_grup_ata(self, request, queryset):
+        """Seçili kullanıcıları bir gruba ata"""
+        from django.shortcuts import render
+        from django.http import HttpResponseRedirect
+        
+        if request.method == 'POST':
+            group_id = request.POST.get('group')
+            if group_id:
+                group = Group.objects.get(id=group_id)
+                count = 0
+                for user in queryset:
+                    user.groups.add(group)
+                    count += 1
+                self.message_user(request, f'✅ {count} kullanıcı "{group.name}" grubuna eklendi.')
+                return HttpResponseRedirect(request.path_info)
+        
+        groups = Group.objects.all()
+        return render(request, 'admin/toplu_grup_ata.html', {
+            'queryset': queryset,
+            'groups': groups,
+            'title': 'Toplu Grup Ata'
+        })
+    toplu_grup_ata.short_description = 'Seçili kullanıcıları gruba ata'
 
-from django.contrib.auth.admin import GroupAdmin
-from django.contrib.auth.models import Group, Permission
-from django.contrib.contenttypes.models import ContentType
-
+# ==================== GRUP ADMIN ====================
 class CustomGroupAdmin(GroupAdmin):
     """Gelişmiş Grup Yönetimi"""
     list_display = ('name', 'user_count', 'permission_count', 'app_list')
     search_fields = ('name',)
-    filter_horizontal = ('permissions',)  # Güzel arayüz için
+    filter_horizontal = ('permissions',)
     
     def user_count(self, obj):
         return obj.user_set.count()
@@ -2738,68 +2762,10 @@ class CustomGroupAdmin(GroupAdmin):
             'classes': ('wide',)
         }),
     )
-    
-    class Media:
-        css = {
-            'all': ('admin/css/group_admin.css',)
-        }
-        js = ('admin/js/group_admin.js',)
 
-# Uygulama bazlı ön tanımlı gruplar oluşturmak için
-def create_default_groups():
-    """Ön tanımlı grupları oluştur"""
-    default_groups = {
-        'Yönetici': [
-            'bina.add_aidat', 'bina.change_aidat', 'bina.delete_aidat', 'bina.view_aidat',
-            'bina.add_gider', 'bina.change_gider', 'bina.delete_gider', 'bina.view_gider',
-            'bina.add_daire', 'bina.change_daire', 'bina.delete_daire', 'bina.view_daire',
-            'bina.add_kisi', 'bina.change_kisi', 'bina.delete_kisi', 'bina.view_kisi',
-            'bina.add_banka', 'bina.change_banka', 'bina.delete_banka', 'bina.view_banka',
-            'bina.add_bankahareket', 'bina.change_bankahareket', 'bina.delete_bankahareket', 'bina.view_bankahareket',
-            'bina.add_depozito', 'bina.change_depozito', 'bina.delete_depozito', 'bina.view_depozito',
-        ],
-        'Muhasebeci': [
-            'bina.add_aidat', 'bina.change_aidat', 'bina.view_aidat',
-            'bina.add_gider', 'bina.change_gider', 'bina.view_gider',
-            'bina.add_bankahareket', 'bina.change_bankahareket', 'bina.view_bankahareket',
-            'bina.view_depozito', 'bina.change_depozito',
-        ],
-        'Daire Sakini': [
-            'bina.view_aidat',
-            'bina.view_bankahareket',
-            'bina.view_depozito',
-        ],
-        'Personel': [
-            'bina.view_aidat',
-            'bina.view_gider',
-        ],
-    }
-    
-    for group_name, permissions in default_groups.items():
-        group, created = Group.objects.get_or_create(name=group_name)
-        if created:
-            for perm_code in permissions:
-                try:
-                    app_label, codename = perm_code.split('.')
-                    perm = Permission.objects.get(
-                        codename=codename,
-                        content_type__app_label=app_label
-                    )
-                    group.permissions.add(perm)
-                except Permission.DoesNotExist:
-                    print(f"⚠️ İzin bulunamadı: {perm_code}")
-            print(f"✅ '{group_name}' grubu oluşturuldu.")
-        else:
-            print(f"ℹ️ '{group_name}' grubu zaten mevcut.")
-
-# Bu fonksiyonu bir yerde çağırın (örnek: manage.py shell'de)
-# from bina.admin import create_default_groups
-# create_default_groups()
-
-# Kullanıcı admin'ini kaydet
+# ÖNCE User ve Group'u kaydedin (ÖNEMLİ!)
 admin_site.register(User, CustomUserAdmin)
-
-admin_site.register(DaireKullanici, DaireKullaniciAdmin)
+admin_site.register(Group, CustomGroupAdmin)
 
 # Diğer modeller
 admin_site.register(SiteAyarlari)
