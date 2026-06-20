@@ -1653,13 +1653,13 @@ class AsgariUcretAdmin(admin.ModelAdmin):
     list_display = ['yil', 'brut_ucret', 'isci_sgk_payi', 'isveren_sgk_payi']
     list_editable = ['brut_ucret']
 
-class GiderAdmin(TarihFiltresiMixin, admin.ModelAdmin):
+class GiderAdmin(admin.ModelAdmin):
     tarih_alan = 'tarih'
     list_display = ('tip', 'tutar', 'tarih', 'hesap_tipi', 'blok', 'muaf_daire_sayisi', 'aciklama', 'taksitlendir_button')
     list_filter = ('tip', 'tarih', 'hesap_tipi', 'blok')
     search_fields = ('aciklama', 'fatura_no')
     filter_horizontal = ('muaf_daireler',)  # Muaf daireleri güzel bir arayüzle seçmek için
-    actions = ['aidatlari_yeniden_olustur', 'aidatlari_temizle', 'blok_bazli_gider_olustur', 'gideri_taksitlendir']
+    actions = ['aidatlari_yeniden_olustur']
     
     fieldsets = (
         ('Temel Bilgiler', {
@@ -2696,7 +2696,7 @@ Not: Şifrenizi bilmiyorsanız yöneticiden yeni şifre talep edebilirsiniz.
         
         return redirect('admin:bina_dairekullanici_changelist')
 
-admin.site.register(DaireKullanici, DaireKullaniciAdmin)
+admin_site.register(DaireKullanici, DaireKullaniciAdmin)
 
 # ========== SITE BAZLI ADMIN SINIFLARI ==========
 
