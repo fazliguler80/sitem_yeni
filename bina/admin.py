@@ -60,11 +60,8 @@ class MultiSiteAdminMixin:
         return qs.none()
 
     def changelist_view(self, request, extra_context=None):
-        # Kullanıcı giriş yapmamışsa login sayfasına yönlendir
         if not request.user.is_authenticated:
             return redirect('/admin/login/')
-
-        # Site seçilmediyse
         if not request.session.get('aktif_site_id'):
             from bina.models import Site
             ilk_site = Site.objects.filter(aktif=True).first()
@@ -73,7 +70,6 @@ class MultiSiteAdminMixin:
                 return redirect('/admin/')
             else:
                 return redirect('/admin/bina/site/add/')
-
         return super().changelist_view(request, extra_context=extra_context)
 
 class TarihFiltresiMixin:
@@ -146,7 +142,7 @@ class TarihFiltresiMixin:
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
-            path('tarih-filtrele/', self.admin_site.admin_view(self.tarih_filtrele_view), name=f'{self.model._meta.model_name}_tarih_filtrele'),
+            path('tarih-filtrele/', self.admin.site.admin_view(self.tarih_filtrele_view), name=f'{self.model._meta.model_name}_tarih_filtrele'),
         ]
         return custom_urls + urls
     
