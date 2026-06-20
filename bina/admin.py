@@ -2448,16 +2448,16 @@ class MaasBordrosuAdmin(admin.ModelAdmin):
         return super().changelist_view(request, extra_context=extra_context)
 
 # Admin sitesi - BURASI ÖNEMLİ
-admin.site = RaporlarAdmin(name='myadmin')
-admin.site.site_header = "SİTE YÖNETİM PANELİ"
-admin.site.site_title = "SİTE YÖNETİM PANELİ"
-admin.site.index_title = "YÖNETİM PANELİNE HOŞ GELDİNİZ"
+admin_site = RaporlarAdmin(name='myadmin')
+admin_site.site_header = "SİTE YÖNETİM PANELİ"
+admin_site.site_title = "SİTE YÖNETİM PANELİ"
+admin_site.index_title = "YÖNETİM PANELİNE HOŞ GELDİNİZ"
 
 # Modelleri kaydet - SAKIN @admin.register KULLANMA!
 # Modelleri kaydet - ÖNCE AsgariUcret ve MaasBordrosu
-admin.site.register(AsgariUcret, AsgariUcretAdmin)
-admin.site.register(MaasBordrosu, MaasBordrosuAdmin)
-admin.site.register(Personel)
+admin_site.register(AsgariUcret, AsgariUcretAdmin)
+admin_site.register(MaasBordrosu, MaasBordrosuAdmin)
+admin_site.register(Personel)
 
 from django.urls import path
 from django.shortcuts import get_object_or_404, redirect
@@ -2755,20 +2755,20 @@ class UserAdmin(admin.ModelAdmin):
     list_filter = ('is_staff', 'is_active', 'is_superuser')
 
 # Diğer modeller
-admin.site.register(SiteAyarlari)
-admin.site.register(Blok, BlokAdmin)
-admin.site.register(Daire, DaireAdmin)
-admin.site.register(Kisi, KisiAdmin)
-admin.site.register(DaireIliskisi, DaireIliskisiAdmin)
-admin.site.register(Aidat, AidatAdmin)
-admin.site.register(Gider, GiderAdmin)
-admin.site.register(Yonetici, YoneticiAdmin)
-admin.site.register(Abonelik)
-admin.site.register(Firma, FirmaAdmin)
-admin.site.register(Banka, BankaAdmin)
-admin.site.register(Depozito, DepozitoAdmin)
-admin.site.register(DepozitoHareket, DepozitoHareketAdmin)
-admin.site.register(Fatura)
-admin.site.register(BankaHareket, BankaHareketAdmin)
-admin.site.register(Site, SiteAdmin)
-admin.site.register(User, UserAdmin)
+admin_site.register(SiteAyarlari)
+admin_site.register(Blok, BlokAdmin)
+admin_site.register(Daire, DaireAdmin)
+admin_site.register(Kisi, KisiAdmin)
+admin_site.register(DaireIliskisi, DaireIliskisiAdmin)
+admin_site.register(Aidat, AidatAdmin)
+admin_site.register(Gider, GiderAdmin)
+admin_site.register(Yonetici, YoneticiAdmin)
+admin_site.register(Abonelik)
+admin_site.register(Firma, FirmaAdmin)
+admin_site.register(Banka, BankaAdmin)
+admin_site.register(Depozito, DepozitoAdmin)
+admin_site.register(DepozitoHareket, DepozitoHareketAdmin)
+admin_site.register(Fatura)
+admin_site.register(BankaHareket, BankaHareketAdmin)
+admin_site.register(Site, SiteAdmin)
+admin_site.register(User, UserAdmin)
