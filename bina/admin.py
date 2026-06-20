@@ -1659,7 +1659,7 @@ class GiderAdmin(admin.ModelAdmin):
     list_filter = ('tip', 'tarih', 'hesap_tipi', 'blok')
     search_fields = ('aciklama', 'fatura_no')
     filter_horizontal = ('muaf_daireler',)  # Muaf daireleri güzel bir arayüzle seçmek için
-    actions = ['aidatlari_yeniden_olustur']
+    actions = ['aidatlari_yeniden_olustur', 'aidatlari_temizle', 'blok_bazli_gider_olustur', 'gideri_taksitlendir']
     
     fieldsets = (
         ('Temel Bilgiler', {
@@ -2109,9 +2109,8 @@ class GiderAdmin(admin.ModelAdmin):
             olusturulan += 1
         
         print(f"      ✅ {olusturulan} aidat oluşturuldu")
-
-    
-        
+  
+       
 class DepozitoAdmin(MultiSiteAdminMixin, admin.ModelAdmin):
     list_display = ('daire', 'kisi', 'tutar', 'alinma_tarihi', 'durum', 'guncel_bakiye', 'hareket_ekle_button')
     list_filter = ('durum', 'alinma_tarihi')
