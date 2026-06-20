@@ -2691,6 +2691,111 @@ class CustomUserAdmin(UserAdmin):
     # Liste ekranında düzenlenebilir alanlar
     list_editable = ('is_staff', 'is_active')
 
+from django.contrib.auth.admin import GroupAdmin
+from django.contrib.auth.models import Group, Permission
+from django.contrib.contenttypes.models import ContentType
+
+class CustomGroupAdmin(GroupAdmin):
+    """Gelişmiş Grup Yönetimi"""
+    list_display = ('name', 'user_count', 'permission_count', 'app_list')
+    search_fields = ('name',)
+    filter_horizontal = ('permissions',)  # Güzel arayüz için
+    
+    def user_count(self, obj):
+        return obj.user_set.count()
+    user_count.short_description = '👥 Kullanıcı Sayısı'
+    
+    def permission_count(self, obj):
+        return obj.permissions.count()
+    permission_count.short_description = '🔑 İzin Sayısı'
+    
+    def app_list(self, obj):
+        """Grubun hangi uygulamalarda izni olduğunu gösterir"""
+        apps = set()
+        for perm in obj.permissions.all():
+            apps.add(perm.content_type.app_label)
+        return ", ".join(sorted(apps)) if apps else "-"
+    app_list.short_description = 'Uygulamalar'
+    
+    fieldsets = (
+        ('Grup Bilgileri', {
+            'fields': ('name',)
+        }),
+        ('Yetkiler (Permissions)', {
+            'fields': ('permissions',),
+            'description': """
+            <div style="background: #fff3cd; padding: 10px; border-radius: 5px; margin: 10px 0;">
+                <strong>💡 İpucu:</strong> 
+                <ul style="margin: 5px 0; padding-left: 20px;">
+                    <li><strong>add_</strong> → Ekleme izni</li>
+                    <li><strong>change_</strong> → Düzenleme izni</li>
+                    <li><strong>delete_</strong> → Silme izni</li>
+                    <li><strong>view_</strong> → Görüntüleme izni</li>
+                </ul>
+                Örnek: <code>bina | aidat | Can change aidat</code> = Aidatları düzenleyebilir.
+            </div>
+            """,
+            'classes': ('wide',)
+        }),
+    )
+    
+    class Media:
+        css = {
+            'all': ('admin/css/group_admin.css',)
+        }
+        js = ('admin/js/group_admin.js',)
+
+# Uygulama bazlı ön tanımlı gruplar oluşturmak için
+def create_default_groups():
+    """Ön tanımlı grupları oluştur"""
+    default_groups = {
+        'Yönetici': [
+            'bina.add_aidat', 'bina.change_aidat', 'bina.delete_aidat', 'bina.view_aidat',
+            'bina.add_gider', 'bina.change_gider', 'bina.delete_gider', 'bina.view_gider',
+            'bina.add_daire', 'bina.change_daire', 'bina.delete_daire', 'bina.view_daire',
+            'bina.add_kisi', 'bina.change_kisi', 'bina.delete_kisi', 'bina.view_kisi',
+            'bina.add_banka', 'bina.change_banka', 'bina.delete_banka', 'bina.view_banka',
+            'bina.add_bankahareket', 'bina.change_bankahareket', 'bina.delete_bankahareket', 'bina.view_bankahareket',
+            'bina.add_depozito', 'bina.change_depozito', 'bina.delete_depozito', 'bina.view_depozito',
+        ],
+        'Muhasebeci': [
+            'bina.add_aidat', 'bina.change_aidat', 'bina.view_aidat',
+            'bina.add_gider', 'bina.change_gider', 'bina.view_gider',
+            'bina.add_bankahareket', 'bina.change_bankahareket', 'bina.view_bankahareket',
+            'bina.view_depozito', 'bina.change_depozito',
+        ],
+        'Daire Sakini': [
+            'bina.view_aidat',
+            'bina.view_bankahareket',
+            'bina.view_depozito',
+        ],
+        'Personel': [
+            'bina.view_aidat',
+            'bina.view_gider',
+        ],
+    }
+    
+    for group_name, permissions in default_groups.items():
+        group, created = Group.objects.get_or_create(name=group_name)
+        if created:
+            for perm_code in permissions:
+                try:
+                    app_label, codename = perm_code.split('.')
+                    perm = Permission.objects.get(
+                        codename=codename,
+                        content_type__app_label=app_label
+                    )
+                    group.permissions.add(perm)
+                except Permission.DoesNotExist:
+                    print(f"⚠️ İzin bulunamadı: {perm_code}")
+            print(f"✅ '{group_name}' grubu oluşturuldu.")
+        else:
+            print(f"ℹ️ '{group_name}' grubu zaten mevcut.")
+
+# Bu fonksiyonu bir yerde çağırın (örnek: manage.py shell'de)
+# from bina.admin import create_default_groups
+# create_default_groups()
+
 # Kullanıcı admin'ini kaydet
 admin_site.register(User, CustomUserAdmin)
 
