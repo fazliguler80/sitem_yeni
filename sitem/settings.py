@@ -160,6 +160,12 @@ FILE_CHARSET = 'utf-8'
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_FROM_EMAIL = 'site@nokrat.com'
 
+# settings.py - EN SONA EKLEYİN
+# Karakter kodlaması için
+import sys
+reload(sys)
+sys.setdefaultencoding('utf8')
+
 #import dj_database_url
 
 # Render PostgreSQL bağlantısı (GEÇİCİ - sadece migration için)
