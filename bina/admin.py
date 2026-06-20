@@ -2669,6 +2669,31 @@ Not: Şifrenizi bilmiyorsanız yöneticiden yeni şifre talep edebilirsiniz.
         
         return redirect('admin:bina_dairekullanici_changelist')
 
+# ==================== KULLANICI ADMIN (EKLENDİ) ====================
+from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.models import User
+
+class CustomUserAdmin(UserAdmin):
+    """Kullanıcı yönetimi için özel admin"""
+    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'is_active', 'date_joined')
+    list_filter = ('is_staff', 'is_active', 'is_superuser', 'groups')
+    search_fields = ('username', 'email', 'first_name', 'last_name')
+    ordering = ('-date_joined',)
+    
+    # Kullanıcı detay sayfasında gösterilecek alanlar
+    fieldsets = (
+        (None, {'fields': ('username', 'password')}),
+        ('Kişisel Bilgiler', {'fields': ('first_name', 'last_name', 'email')}),
+        ('İzinler', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Önemli Tarihler', {'fields': ('last_login', 'date_joined')}),
+    )
+    
+    # Liste ekranında düzenlenebilir alanlar
+    list_editable = ('is_staff', 'is_active')
+
+# Kullanıcı admin'ini kaydet
+admin_site.register(User, CustomUserAdmin)
+
 admin_site.register(DaireKullanici, DaireKullaniciAdmin)
 
 # Diğer modeller
