@@ -3,11 +3,12 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from bina import views
+from bina.admin import admin_site
 
 urlpatterns = [
     path('admin/site-degistir/<int:site_id>/', views.site_degistir, name='site_degistir'),
     path('', views.home_page, name='home'),
-    path('admin/', admin.site.urls),
+    path('admin/', admin_site.urls),
     path('portal/', include('bina.portal_urls')),
 ]
 
