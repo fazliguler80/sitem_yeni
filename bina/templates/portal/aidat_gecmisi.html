@@ -54,17 +54,14 @@
                 </td>
                 <td>{{ aidat.aciklama|default:"-"|truncatechars:30 }}</td>
                 <td>
-                    {% if not aidat.odeme_yapildi_mi %}
-                        <form method="post" action="{% url 'aidat_ode' aidat.id %}" 
-                            style="display:inline;" 
-                            onsubmit="return confirm('{{ aidat.tutar|floatformat:2 }} TL aidatı ödemek istediğinize emin misiniz?');">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-success btn-sm">
-                                💰 Öde
-                            </button>
-                        </form>
+                    {% if aidat.odeme_yapildi_mi %}
+                        <span class="badge bg-success">✅ Ödendi</span>
+                        <br>
+                        <small class="text-muted">{{ aidat.odeme_tarihi|date:"d/m/Y" }}</small>
                     {% else %}
-                        <button class="btn btn-secondary btn-sm" disabled>Ödendi</button>
+                        <span class="badge bg-danger">❌ Ödenmedi</span>
+                        <br>
+                        <small class="text-muted">Yönetici tarafından ödenecek</small>
                     {% endif %}
                 </td>
             </tr>
