@@ -1690,6 +1690,8 @@ class RaporlarAdmin(admin.AdminSite):
         
         return JsonResponse({'status': 'error', 'message': 'Geçersiz istek!'})
 
+    # bina/admin.py - RaporlarAdmin sınıfı içinde get_app_list metodunu güncelleyin
+
     def get_app_list(self, request, app_label=None):
         # Mevcut app_list'i al
         try:
@@ -1746,34 +1748,30 @@ class RaporlarAdmin(admin.AdminSite):
                 ]
             }
             
-            # ========== SİSTEM BÖLÜMÜ - GÜNCELLENDİ ==========
+            # ========== SİSTEM BÖLÜMÜ ==========
             sistem_app = {
                 'name': '⚙️ SİSTEM',
                 'app_label': 'sistem',
                 'app_url': '#',
                 'models': [
-                    # Log Kayıtları
                     {
                         'name': '📋 Günlük Kayıtları (Log)',
                         'object_name': 'logentry',
                         'admin_url': '/admin/admin/logentry/',
                         'view_only': True,
                     },
-                    # İçerik Türleri
                     {
                         'name': '📦 İçerik Türleri',
                         'object_name': 'contenttype',
-                        'admin_url': '/admin/contenttypes/contenttype/',
+                        'admin_url': '/admin/bina/contenttype/',  # 🔧 DÜZELTİLDİ
                         'view_only': True,
                     },
-                    # Oturumlar
                     {
                         'name': '🔐 Oturumlar',
                         'object_name': 'session',
-                        'admin_url': '/admin/sessions/session/',
+                        'admin_url': '/admin/bina/session/',  # 🔧 DÜZELTİLDİ
                         'view_only': True,
                     },
-                    # Yedekleme
                     {
                         'name': '💾 Veritabanı Yedekle (İndir)',
                         'object_name': 'yedekle',
@@ -1792,7 +1790,7 @@ class RaporlarAdmin(admin.AdminSite):
             # Raporlar bölümünü en başa ekle
             app_list.insert(0, rapor_app)
             
-            # Sistem bölümünü en sona ekle (yedekleme ile birleştirildi)
+            # Sistem bölümünü en sona ekle
             app_list.append(sistem_app)
         
         return app_list
@@ -1836,6 +1834,9 @@ class LogEntryAdmin(admin.ModelAdmin):
         }),
     )
 
+# bina/admin.py - Diğer admin sınıflarının yanına ekleyin
+
+# ==================== CONTENT TYPE ADMIN ====================
 class CustomContentTypeAdmin(ContentTypeAdmin):
     list_display = ('app_label', 'model', 'id')
     list_filter = ('app_label',)
@@ -1851,7 +1852,8 @@ class CustomContentTypeAdmin(ContentTypeAdmin):
     def has_delete_permission(self, request, obj=None):
         return request.user.is_superuser
 
-# Session admin'i
+
+# ==================== SESSION ADMIN ====================
 class CustomSessionAdmin(SessionAdmin):
     list_display = ('session_key', 'expire_date', 'get_user_id')
     list_filter = ('expire_date',)
