@@ -498,6 +498,8 @@ class DaireFiltresi(SimpleListFilter):
         return queryset
 
 
+# bina/admin.py - AidatAdmin sınıfı
+
 class AidatAdmin(TarihFiltresiMixin, admin.ModelAdmin):
     tarih_alan = 'odeme_tarihi'
     list_display = ('daire', 'ay', 'yil', 'aidat_tipi', 'tutar', 'odeme_yapildi_mi', 'odeme_tarihi', 'kim_odedi_bilgisi')
@@ -506,8 +508,8 @@ class AidatAdmin(TarihFiltresiMixin, admin.ModelAdmin):
         'yil',
         'ay',
         'aidat_tipi',
-        'daire__blok',  # Önce Blok
-        DaireFiltresi,             # Sonra Daire (bloğa bağlı)
+        'daire__blok',
+        DaireFiltresi,
         'gider__tip',
     )
     search_fields = ('daire__blok__blok_adi', 'daire__daire_no', 'aciklama', 'kim_odedi__ad_soyad')
@@ -530,14 +532,20 @@ class AidatAdmin(TarihFiltresiMixin, admin.ModelAdmin):
     )
     
     def save_model(self, request, obj, form, change):
-        """Aidat kaydedilirken otomatik açıklama oluştur"""
+        """
+        Aidat kaydedilirken:
+        1. Otomatik açıklama oluştur
+        2. Ödeme durumu değiştiyse banka ve depozito hareketlerini yönet
+        """
+        from datetime import date
+        from .models import BankaHareket, Banka, Depozito, DepozitoHareket
+        from decimal import Decimal
         
+        # ========== 1. AÇIKLAMA OLUŞTUR ==========
         if obj.aidat_tipi == 'sabit':
-            # Sabit aidat: gider yok, açıklama formatlı
             obj.gider = None
             obj.aciklama = f"{obj.ay}/{obj.yil} Sabit Aidat - {obj.tutar:.2f} TL"
         else:
-            # Ekstra veya Yakıt aidatları
             if not obj.aciklama or change == False:
                 if obj.gider:
                     hesaplanan = float(obj.tutar) - float(obj.yuvarlama_farki)
@@ -545,24 +553,89 @@ class AidatAdmin(TarihFiltresiMixin, admin.ModelAdmin):
                 else:
                     obj.aciklama = f"{obj.ay}/{obj.yil} {obj.get_aidat_tipi_display()} - {obj.tutar:.2f} TL"
         
+        # ========== 2. ÖDEME DURUMU DEĞİŞİKLİĞİNİ KONTROL ET ==========
+        if change:
+            try:
+                eski = Aidat.objects.get(pk=obj.pk)
+                
+                # Ödeme durumu değişti mi?
+                if eski.odeme_yapildi_mi != obj.odeme_yapildi_mi:
+                    
+                    if obj.odeme_yapildi_mi:
+                        # ===== ÖDEME YAPILDI =====
+                        print(f"\n🔔 Admin: Aidat ödendi - {obj.daire} {obj.ay}/{obj.yil}")
+                        
+                        if not obj.odeme_tarihi:
+                            obj.odeme_tarihi = date.today()
+                        
+                        # Banka hareketi oluştur
+                        ana_hesap = Banka.objects.filter(ana_hesap_mi=True).first()
+                        if ana_hesap:
+                            try:
+                                BankaHareket.objects.create(
+                                    banka=ana_hesap,
+                                    hareket_tipi='gelir',
+                                    tutar=obj.tutar,
+                                    tarih=obj.odeme_tarihi,
+                                    aciklama=f"Aidat ödemesi - {obj.daire} - {obj.ay}/{obj.yil}",
+                                    aidat=obj,
+                                    kisi=obj.kim_odedi
+                                )
+                                ana_hesap.guncel_bakiye = float(ana_hesap.guncel_bakiye) + float(obj.tutar)
+                                ana_hesap.save()
+                                print(f"  ✅ Banka hareketi oluşturuldu")
+                            except Exception as e:
+                                print(f"  ❌ Banka hareketi hatası: {e}")
+                        else:
+                            print("  ❌ Ana hesap bulunamadı!")
+                        
+                        # Depozito hareketi oluştur (yuvarlama farkı varsa)
+                        if obj.yuvarlama_farki and float(obj.yuvarlama_farki) != 0:
+                            depozito = Depozito.objects.filter(daire=obj.daire, durum='alindi').first()
+                            if depozito:
+                                fark = float(obj.yuvarlama_farki)
+                                try:
+                                    DepozitoHareket.objects.create(
+                                        depozito=depozito,
+                                        hareket_tipi='ekleme' if fark > 0 else 'cikarma',
+                                        tutar=Decimal(str(abs(fark))),
+                                        tarih=obj.odeme_tarihi or date.today(),
+                                        aciklama=f"{obj.aciklama} (Yuvarlama farkı: {fark:+.2f} TL)",
+                                        gider=obj.gider,
+                                        aidat=obj
+                                    )
+                                    print(f"  ✅ Depozito hareketi oluşturuldu: {fark} TL")
+                                except Exception as e:
+                                    print(f"  ❌ Depozito hareketi hatası: {e}")
+                            else:
+                                print("  ❌ Depozito bulunamadı!")
+                        else:
+                            print("  Yuvarlama farkı 0, depozito işlemi atlandı")
+                    
+                    else:
+                        # ===== ÖDEME İPTAL EDİLDİ =====
+                        print(f"\n🔔 Admin: Aidat ödemesi iptal edildi - {obj.daire} {obj.ay}/{obj.yil}")
+                        
+                        # Banka hareketlerini sil
+                        silinen_banka = BankaHareket.objects.filter(aidat=obj).delete()
+                        print(f"  Silinen banka hareketi sayısı: {silinen_banka[0]}")
+                        
+                        # Depozito hareketlerini sil
+                        silinen_depo = DepozitoHareket.objects.filter(aidat=obj).delete()
+                        print(f"  Silinen depozito hareketi sayısı: {silinen_depo[0]}")
+                        
+                        # Ödeme tarihini temizle
+                        obj.odeme_tarihi = None
+                        
+            except Aidat.DoesNotExist:
+                pass
+        
+        # ========== 3. NORMAL KAYDET ==========
         super().save_model(request, obj, form, change)
     
     def kim_odedi_bilgisi(self, obj):
         if obj.kim_odedi:
             return obj.kim_odedi.ad_soyad
-        return "-"
-    kim_odedi_bilgisi.short_description = "Ödeyen Kişi"
-
-    def gider_bilgisi(self, obj):
-        """Gider bilgisini formatlı göster"""
-        if obj.gider:
-            return f"{obj.gider.get_tip_display()} - {obj.gider.tarih.strftime('%d/%m/%Y')}"
-        return "-"
-    
-    def kim_odedi_bilgisi(self, obj):
-        """Ödeyen kişi bilgisini göster"""
-        if obj.kim_odedi:
-            return f"{obj.kim_odedi.ad_soyad}"
         return "-"
     kim_odedi_bilgisi.short_description = "Ödeyen Kişi"
     kim_odedi_bilgisi.admin_order_field = 'kim_odedi__ad_soyad'
@@ -578,7 +651,7 @@ class AidatAdmin(TarihFiltresiMixin, admin.ModelAdmin):
                 aidat.odeme_yap(odeme_tarihi=date.today())
                 count += 1
         self.message_user(request, f"✅ {count} aidat ödendi.")
-    toplu_odeme_yap.short_description = "Seçili aidatları öde"
+    toplu_odeme_yap.short_description = "Seçili aidatları öde (Banka + Depozito)"
     
     def toplu_odeme_iptal(self, request, queryset):
         """Seçili aidatların ödemesini iptal et"""
@@ -588,7 +661,7 @@ class AidatAdmin(TarihFiltresiMixin, admin.ModelAdmin):
                 aidat.odeme_iptal()
                 count += 1
         self.message_user(request, f"✅ {count} aidatın ödemesi iptal edildi.")
-    toplu_odeme_iptal.short_description = "Seçili aidatların ödemesini iptal et"
+    toplu_odeme_iptal.short_description = "Seçili aidatların ödemesini iptal et (Banka + Depozito)"
     
     def aidat_raporu_excel(self, request, queryset):
         """Seçili aidatları Excel'e aktar"""
@@ -597,12 +670,10 @@ class AidatAdmin(TarihFiltresiMixin, admin.ModelAdmin):
         from openpyxl.styles import Font, Alignment, PatternFill
         from datetime import datetime
         
-        # Excel dosyası oluştur
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "Aidat Raporu"
         
-        # Başlık satırı
         basliklar = ['ID', 'Daire', 'Dönem', 'Aidat Tipi', 'Gider Tipi', 'Tutar', 'Ödendi mi?', 'Ödeme Tarihi', 'Ödeyen Kişi', 'Açıklama']
         for col, baslik in enumerate(basliklar, 1):
             cell = ws.cell(row=1, column=col, value=baslik)
@@ -610,7 +681,6 @@ class AidatAdmin(TarihFiltresiMixin, admin.ModelAdmin):
             cell.fill = PatternFill(start_color="1e3c72", end_color="1e3c72", fill_type="solid")
             cell.alignment = Alignment(horizontal="center")
         
-        # Veri satırları
         row = 2
         for aidat in queryset:
             ws.cell(row=row, column=1, value=aidat.id)
@@ -625,11 +695,9 @@ class AidatAdmin(TarihFiltresiMixin, admin.ModelAdmin):
             ws.cell(row=row, column=10, value=aidat.aciklama)
             row += 1
         
-        # Sütun genişliklerini ayarla
         for col in range(1, 11):
             ws.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 20
         
-        # Response oluştur
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         response['Content-Disposition'] = f'attachment; filename=aidat_raporu_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
         wb.save(response)
@@ -640,7 +708,6 @@ class AidatAdmin(TarihFiltresiMixin, admin.ModelAdmin):
         from django.db.models import Sum
         queryset = self.get_queryset(request)
         
-        # Filtre uygulandı mı kontrol et
         try:
             from django.contrib.admin.views.main import ChangeList
             cl = ChangeList(request, self.model, self.list_display, self.list_display_links,
@@ -655,7 +722,6 @@ class AidatAdmin(TarihFiltresiMixin, admin.ModelAdmin):
         toplam_odenmis = queryset.filter(odeme_yapildi_mi=True).aggregate(Sum('tutar'))['tutar__sum'] or 0
         toplam_odenmemis = queryset.filter(odeme_yapildi_mi=False).aggregate(Sum('tutar'))['tutar__sum'] or 0
         
-        # Gider tipine göre istatistik
         gider_istatistik = []
         if 'gider__tip' in request.GET:
             gider_tipi = request.GET.get('gider__tip')
