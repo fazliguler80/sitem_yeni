@@ -1835,7 +1835,7 @@ class LogEntryAdmin(admin.ModelAdmin):
 # bina/admin.py - Diğer admin sınıflarının yanına ekleyin
 
 # ==================== CONTENT TYPE ADMIN ====================
-class CustomContentTypeAdmin(ContentTypeAdmin):
+class CustomContentTypeAdmin(admin.ModelAdmin):
     list_display = ('app_label', 'model', 'id')
     list_filter = ('app_label',)
     search_fields = ('app_label', 'model')
@@ -1852,7 +1852,7 @@ class CustomContentTypeAdmin(ContentTypeAdmin):
 
 
 # ==================== SESSION ADMIN ====================
-class CustomSessionAdmin(SessionAdmin):
+class CustomSessionAdmin(admin.ModelAdmin):
     list_display = ('session_key', 'expire_date', 'get_user_id')
     list_filter = ('expire_date',)
     search_fields = ('session_key',)
