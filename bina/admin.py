@@ -785,13 +785,7 @@ class AidatAdmin(TarihFiltresiMixin, BaseSiteAdmin):
 
 class RaporlarAdmin(BaseSiteAdmin):
 
-    def __init__(self, name='myadmin'):  # name parametresini açıkça belirt
-        super().__init__(name)  # sadece name parametresini gönder
-        # Varsayılan değerler
-        self._site_header = "SİTE YÖNETİM PANELİ"
-        self._site_title = "SİTE YÖNETİM PANELİ"
-        self._index_title = "YÖNETİM PANELİNE HOŞ GELDİNİZ"
-    
+     
     @property
     def site_header(self):
         """Dinamik site başlığı"""
