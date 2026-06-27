@@ -1803,10 +1803,6 @@ class RaporlarAdmin(admin.AdminSite):
         return JsonResponse({'status': 'error', 'message': 'Geçersiz istek!'})
 
         
-    # bina/admin.py - RaporlarAdmin sınıfı içinde get_app_list metodunu güncelleyin
-
-    # bina/admin.py - RaporlarAdmin sınıfı içinde get_app_list metodunu güncelleyin
-
     def get_app_list(self, request, app_label=None):
         # Mevcut app_list'i al
         try:
@@ -1903,13 +1899,14 @@ class RaporlarAdmin(admin.AdminSite):
                 ]
             }
             
-            # ========== TÜM ÇİFT KAYITLARI KALDIR ==========
+            # ========== SADECE ÇİFT KAYITLARI KALDIR, AUTH'U KORU ==========
             # Yeni bir app_list oluştur
             yeni_app_list = []
             
             for app in app_list:
-                # 'admin', 'auth', 'contenttypes', 'sessions' bölümlerini TAMAMEN KALDIR
-                if app['app_label'] not in ['admin', 'auth', 'contenttypes', 'sessions']:
+                # SADECE 'admin', 'contenttypes', 'sessions' bölümlerini kaldır
+                # 'auth' bölümünü KORU (Kullanıcılar ve Gruplar için)
+                if app['app_label'] not in ['admin', 'contenttypes', 'sessions']:
                     yeni_app_list.append(app)
             
             # Yeni listeyi kullan
