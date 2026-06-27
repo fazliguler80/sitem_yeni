@@ -31,6 +31,10 @@ from django.core.files.base import ContentFile
 from django.conf import settings
 from django.contrib.admin import SimpleListFilter
 from datetime import date
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.sessions.models import Session
+from django.contrib.contenttypes.admin import ContentTypeAdmin
+from django.contrib.sessions.admin import SessionAdmin
 
 from .models import (
     SiteAyarlari, Blok, Daire, Kisi, DaireIliskisi, 
@@ -1832,6 +1836,41 @@ class LogEntryAdmin(admin.ModelAdmin):
         }),
     )
 
+class CustomContentTypeAdmin(ContentTypeAdmin):
+    list_display = ('app_label', 'model', 'id')
+    list_filter = ('app_label',)
+    search_fields = ('app_label', 'model')
+    readonly_fields = ('app_label', 'model', 'id')
+    
+    def has_add_permission(self, request):
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_superuser
+
+# Session admin'i
+class CustomSessionAdmin(SessionAdmin):
+    list_display = ('session_key', 'expire_date', 'get_user_id')
+    list_filter = ('expire_date',)
+    search_fields = ('session_key',)
+    readonly_fields = ('session_key', 'session_data', 'expire_date')
+    
+    def get_user_id(self, obj):
+        session_data = obj.get_decoded()
+        return session_data.get('_auth_user_id', '-')
+    get_user_id.short_description = 'Kullanıcı ID'
+    
+    def has_add_permission(self, request):
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_superuser
 
 # ==================== PERSONEL / MAAŞ ADMIN ====================
 
@@ -3195,3 +3234,5 @@ admin_site.register(DepozitoHareket, DepozitoHareketAdmin)
 admin_site.register(Fatura)
 admin_site.register(BankaHareket, BankaHareketAdmin)
 admin_site.register(LogEntry, LogEntryAdmin)
+admin_site.register(ContentType, CustomContentTypeAdmin)
+admin_site.register(Session, CustomSessionAdmin)
