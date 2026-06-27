@@ -2877,6 +2877,154 @@ Not: Şifrenizi bilmiyorsanız yöneticiden yeni şifre talep edebilirsiniz.
             messages.error(request, f'❌ E-posta gönderilemedi: {str(e)}')
         
         return redirect('admin:bina_dairekullanici_changelist')
+    
+# bina/admin.py - SiteAdmin sınıfını ekleyin
+
+# bina/admin.py - SiteAdmin sınıfını ekleyin
+
+class SiteAdmin(admin.ModelAdmin):
+    list_display = ('adi', 'slug', 'aktif', 'admin_user', 'telefon', 'email')
+    list_filter = ('aktif',)
+    search_fields = ('adi', 'slug', 'adres', 'telefon', 'email')
+    list_editable = ('aktif',)
+    readonly_fields = ('admin_user',)
+    
+    fieldsets = (
+        ('Temel Bilgiler', {
+            'fields': ('adi', 'slug', 'aciklama', 'aktif')
+        }),
+        ('İletişim Bilgileri', {
+            'fields': ('adres', 'telefon', 'email')
+        }),
+        ('Admin Bilgileri', {
+            'fields': ('admin_user',),
+            'description': 'Site admini otomatik oluşturulur. Kullanıcı adı: slug_admin'
+        }),
+    )
+    
+    def save_model(self, request, obj, form, change):
+        """Site kaydedilirken admin kullanıcısı oluştur"""
+        # Yeni site ekleniyorsa
+        if not change:
+            # slug'dan username oluştur
+            username = f"{obj.slug.replace('-', '_')}_admin"
+            
+            # Rastgele şifre oluştur
+            import string
+            import random
+            password = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
+            
+            # Kullanıcı oluştur
+            user = User.objects.create_user(
+                username=username,
+                password=password,
+                email=obj.email or f"{obj.slug}@nokrat.com",
+                first_name=f"{obj.adi} Admini",
+                is_staff=True,
+                is_active=True
+            )
+            obj.admin_user = user
+            
+            # Şifreyi session'a kaydet (sonra gösterilecek)
+            request.session['yeni_site_sifre'] = password
+            request.session['yeni_site_kullanici'] = username
+        
+        super().save_model(request, obj, form, change)
+    
+    def response_add(self, request, obj, post_url_continue=None):
+        """Site eklendikten sonra şifre bilgisini göster"""
+        from django.contrib import messages
+        
+        # Session'dan şifre bilgilerini al
+        password = request.session.pop('yeni_site_sifre', None)
+        username = request.session.pop('yeni_site_kullanici', None)
+        
+        if password and username:
+            messages.success(
+                request,
+                f'✅ Site başarıyla oluşturuldu!<br>'
+                f'👤 Admin Kullanıcı: <strong>{username}</strong><br>'
+                f'🔑 Şifre: <strong>{password}</strong><br>'
+                f'📧 E-posta: <strong>{obj.email or f"{obj.slug}@nokrat.com"}</strong><br>'
+                f'<small style="color: #666;">Bu şifreyi not alın! İlk girişte değiştirmeniz önerilir.</small>'
+            )
+        
+        return super().response_add(request, obj, post_url_continue)
+
+class SiteAdmin(admin.ModelAdmin):
+    list_display = ('adi', 'slug', 'aktif', 'admin_user', 'telefon', 'email')
+    list_filter = ('aktif',)
+    search_fields = ('adi', 'slug', 'adres', 'telefon', 'email')
+    list_editable = ('aktif',)
+    readonly_fields = ('admin_user',)
+    
+    fieldsets = (
+        ('Temel Bilgiler', {
+            'fields': ('adi', 'slug', 'aciklama', 'aktif')
+        }),
+        ('İletişim Bilgileri', {
+            'fields': ('adres', 'telefon', 'email')
+        }),
+        ('Admin Bilgileri', {
+            'fields': ('admin_user',),
+            'description': 'Site admini otomatik oluşturulur. Kullanıcı adı: slug_admin'
+        }),
+    )
+    
+    def save_model(self, request, obj, form, change):
+        """Site kaydedilirken admin kullanıcısı oluştur"""
+        # Yeni site ekleniyorsa
+        if not change:
+            # slug'dan username oluştur
+            username = f"{obj.slug.replace('-', '_')}_admin"
+            
+            # Rastgele şifre oluştur
+            import string
+            import random
+            password = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
+            
+            # Kullanıcı oluştur
+            user = User.objects.create_user(
+                username=username,
+                password=password,
+                email=obj.email or f"{obj.slug}@nokrat.com",
+                first_name=f"{obj.adi} Admini",
+                is_staff=True,
+                is_active=True
+            )
+            obj.admin_user = user
+            
+            # Şifreyi session'a kaydet (sonra gösterilecek)
+            request.session['yeni_site_sifre'] = password
+            request.session['yeni_site_kullanici'] = username
+        
+        super().save_model(request, obj, form, change)
+    
+    def response_add(self, request, obj, post_url_continue=None):
+        """Site eklendikten sonra şifre bilgisini göster"""
+        from django.contrib import messages
+        
+        # Session'dan şifre bilgilerini al
+        password = request.session.pop('yeni_site_sifre', None)
+        username = request.session.pop('yeni_site_kullanici', None)
+        
+        if password and username:
+            messages.success(
+                request,
+                f'✅ Site başarıyla oluşturuldu!<br>'
+                f'👤 Admin Kullanıcı: <strong>{username}</strong><br>'
+                f'🔑 Şifre: <strong>{password}</strong><br>'
+                f'📧 E-posta: <strong>{obj.email or f"{obj.slug}@nokrat.com"}</strong><br>'
+                f'<small style="color: #666;">Bu şifreyi not alın! İlk girişte değiştirmeniz önerilir.</small>'
+            )
+        
+        return super().response_add(request, obj, post_url_continue)
+    
+    class Media:
+        css = {
+            'all': ('admin/css/site_admin.css',)
+        }
+        js = ('admin/js/site_admin.js',)
 
 # ==================== KULLANICI ADMIN (EKLENDİ) ====================
 from django.contrib.auth.admin import UserAdmin, GroupAdmin
@@ -2968,6 +3116,7 @@ admin_site.register(Group, CustomGroupAdmin)
 
 # Diğer modeller
 admin_site.register(SiteAyarlari)
+admin_site.register(Site, SiteAdmin)
 admin_site.register(Blok)
 admin_site.register(Daire, DaireAdmin)
 admin_site.register(Kisi, KisiAdmin)

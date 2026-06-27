@@ -5,7 +5,9 @@ from . import portal_views
 
 urlpatterns = [
     # Site değiştirme (portal_views içinde)
+    path('site-secici/', portal_views.site_secici, name='site_secici'),
     path('site-degistir/<int:site_id>/', portal_views.portal_site_degistir, name='portal_site_degistir'),
+    path('site-degistir-ajax/', portal_views.site_degistir_ajax, name='site_degistir_ajax'),
     
     # Giriş/Çıkış
     path('login/', portal_views.portal_login, name='portal_login'),

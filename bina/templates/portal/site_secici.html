@@ -1,0 +1,82 @@
+<!-- templates/portal/site_secici.html -->
+
+{% extends "portal/base.html" %}
+{% load static %}
+
+{% block title %}Site Seçimi{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">🏢 Site Seçimi</h4>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                                {{ message|safe }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        {% if siteler %}
+                            <div class="mb-4">
+                                <label for="site_id" class="form-label fw-bold">
+                                    <i class="fas fa-building"></i> Site Seçin:
+                                </label>
+                                <select name="site_id" id="site_id" class="form-select form-select-lg" required>
+                                    <option value="">-- Site Seçin --</option>
+                                    {% for site in siteler %}
+                                        <option value="{{ site.id }}" 
+                                                {% if site.id == secili_site_id %}selected{% endif %}>
+                                            {{ site.adi }}
+                                            {% if site.id == secili_site_id %} ✅{% endif %}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="form-text">
+                                    <i class="fas fa-info-circle"></i> 
+                                    Seçtiğiniz siteye ait bilgileri görüntüleyebileceksiniz.
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-check-circle"></i> Site Seç
+                                </button>
+                                <a href="{% url 'portal_ana' %}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-arrow-left"></i> Vazgeç
+                                </a>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <strong>Uyarı:</strong> Henüz aktif site bulunmamaktadır.
+                                Lütfen yönetici ile iletişime geçin.
+                            </div>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Bilgi -->
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h6><i class="fas fa-info-circle"></i> Bilgi</h6>
+                    <p class="text-muted small">
+                        Birden fazla siteye erişiminiz varsa, buradan site seçimi yapabilirsiniz.
+                        Seçtiğiniz site oturum süresince hatırlanacaktır.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

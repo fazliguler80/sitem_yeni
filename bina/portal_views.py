@@ -545,3 +545,75 @@ def depozito_detay(request, depozito_id):
     }
     
     return render(request, 'portal/depozito_detay.html', context)
+
+# bina/portal_views.py - DOSYANIN SONUNA EKLEYİN
+
+# ==================== SITE SEÇİCİ VİEW'LARI ====================
+
+@login_required
+def site_secici(request):
+    """
+    Kullanıcının aktif site seçmesi için sayfa
+    """
+    from .models import Site
+    
+    siteler = Site.objects.filter(aktif=True)
+    
+    if request.method == 'POST':
+        site_id = request.POST.get('site_id')
+        if site_id:
+            try:
+                site = Site.objects.get(id=site_id, aktif=True)
+                request.session['portal_site_id'] = site.id
+                request.session['portal_site_adi'] = site.adi
+                messages.success(request, f"✅ {site.adi} sitesi seçildi.")
+                
+                # Önceki sayfaya yönlendir veya ana sayfaya
+                next_url = request.GET.get('next', 'portal_ana')
+                return redirect(next_url)
+            except Site.DoesNotExist:
+                messages.error(request, "Geçersiz site seçimi!")
+        else:
+            messages.error(request, "Lütfen bir site seçin!")
+    
+    # Mevcut seçili site
+    secili_site_id = request.session.get('portal_site_id')
+    secili_site = None
+    if secili_site_id:
+        try:
+            secili_site = Site.objects.get(id=secili_site_id, aktif=True)
+        except Site.DoesNotExist:
+            pass
+    
+    context = {
+        'siteler': siteler,
+        'secili_site': secili_site,
+        'secili_site_id': secili_site_id,
+    }
+    return render(request, 'portal/site_secici.html', context)
+
+
+@login_required
+def site_degistir_ajax(request):
+    """
+    AJAX ile site değiştirme (dropdown için)
+    """
+    from .models import Site
+    from django.http import JsonResponse
+    
+    if request.method == 'POST':
+        site_id = request.POST.get('site_id')
+        if site_id:
+            try:
+                site = Site.objects.get(id=site_id, aktif=True)
+                request.session['portal_site_id'] = site.id
+                request.session['portal_site_adi'] = site.adi
+                return JsonResponse({
+                    'success': True,
+                    'site_adi': site.adi,
+                    'site_id': site.id
+                })
+            except Site.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Site bulunamadı'})
+    
+    return JsonResponse({'success': False, 'error': 'Geçersiz istek'})
