@@ -33,27 +33,44 @@
                 <td>{{ aidat.ay }}/{{ aidat.yil }}</td>
                 <td>
                     {% if aidat.aidat_tipi == 'sabit' %}
-                        🏠 Sabit
+                        <span class="badge bg-info">Sabit</span>
+                    {% elif aidat.aidat_tipi == 'ekstra' %}
+                        <span class="badge bg-warning">Ekstra</span>
                     {% elif aidat.aidat_tipi == 'yakıt' %}
-                        🔥 Yakıt
+                        <span class="badge bg-danger">Yakıt</span>
                     {% else %}
-                        📊 Ekstra
+                        <span class="badge bg-secondary">{{ aidat.get_aidat_tipi_display }}</span>
                     {% endif %}
                 </td>
-                <td>{{ aidat.aciklama|default:"-" }}</td>
-                <td>{{ aidat.tutar|floatformat:2 }} TL</td>
+                <td><strong>{{ aidat.tutar|floatformat:2 }} TL</strong></td>
                 <td>
                     {% if aidat.odeme_yapildi_mi %}
-                        <span style="color: green; font-weight: bold;">✅ Ödendi</span>
+                        <span class="badge bg-success">✅ Ödendi</span>
+                        <br>
+                        <small class="text-muted">{{ aidat.odeme_tarihi|date:"d/m/Y" }}</small>
                     {% else %}
-                        <span style="color: red; font-weight: bold;">❌ Ödenmedi</span>
+                        <span class="badge bg-danger">❌ Ödenmedi</span>
                     {% endif %}
                 </td>
-                <td>{{ aidat.odeme_tarihi|date:"d/m/Y"|default:"-" }}</td>
+                <td>{{ aidat.aciklama|default:"-"|truncatechars:30 }}</td>
+                <td>
+                    {% if not aidat.odeme_yapildi_mi %}
+                        <form method="post" action="{% url 'aidat_ode' aidat.id %}" 
+                            style="display:inline;" 
+                            onsubmit="return confirm('{{ aidat.tutar|floatformat:2 }} TL aidatı ödemek istediğinize emin misiniz?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success btn-sm">
+                                💰 Öde
+                            </button>
+                        </form>
+                    {% else %}
+                        <button class="btn btn-secondary btn-sm" disabled>Ödendi</button>
+                    {% endif %}
+                </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="6" style="text-align: center;">Henüz aidat kaydı bulunmuyor.</td>
+                <td colspan="6" class="text-center">Henüz aidat kaydı bulunmamaktadır.</td>
             </tr>
             {% endfor %}
         </tbody>

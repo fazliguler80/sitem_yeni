@@ -524,3 +524,98 @@ def depozito_detay(request, depozito_id):
     }
     
     return render(request, 'portal/depozito_detay.html', context)
+
+# bina/portal_views.py - DOSYANIN SONUNA EKLEYİN
+
+@login_required
+def aidat_ode(request, aidat_id):
+    """
+    Portal üzerinden aidat ödeme yapar.
+    Banka hareketi ve depozito hareketi oluşturur.
+    """
+    from datetime import date
+    from decimal import Decimal
+    
+    try:
+        # Kullanıcının daire bilgisini al
+        daire_kullanici = DaireKullanici.objects.get(kullanici=request.user)
+        daire = daire_kullanici.daire
+        
+        # Aidatı al ve yetki kontrolü yap
+        aidat = get_object_or_404(Aidat, id=aidat_id, daire=daire)
+        
+        # Zaten ödenmiş mi kontrol et
+        if aidat.odeme_yapildi_mi:
+            messages.warning(request, "Bu aidat zaten ödenmiş!")
+            return redirect('aidat_gecmisi')
+        
+        # POST isteği mi kontrol et (güvenlik)
+        if request.method != 'POST':
+            messages.error(request, "Geçersiz istek!")
+            return redirect('aidat_gecmisi')
+        
+        # ========== AİDAT ÖDEMESİNİ YAP ==========
+        print("\n" + "="*60)
+        print("🚀 PORTAL AİDAT ÖDEME BAŞLADI")
+        print(f"📋 Aidat ID: {aidat.id}")
+        print(f"🏠 Daire: {aidat.daire}")
+        print(f"📅 Dönem: {aidat.ay}/{aidat.yil}")
+        print(f"💰 Tutar: {aidat.tutar} TL")
+        print(f"📊 Yuvarlama Farkı: {aidat.yuvarlama_farki}")
+        print("="*60)
+        
+        # Kullanıcının kişi bilgisini al
+        kisi = daire_kullanici.kisi
+        
+        # 1. Aidat ödeme metodunu çağır
+        success, message = aidat.odeme_yap(
+            odeme_tarihi=date.today(),
+            kisi=kisi,
+            notu="Portal üzerinden ödeme"
+        )
+        
+        if success:
+            # Başarılı mesajı
+            messages.success(request, f"✅ Aidat ödemeniz başarıyla alındı! {aidat.tutar} TL")
+            
+            # Debug için log
+            print(f"✅ Ödeme başarılı!")
+            
+            # Banka hareketini kontrol et
+            from .models import BankaHareket
+            banka_hareketleri = BankaHareket.objects.filter(aidat=aidat)
+            if banka_hareketleri.exists():
+                print(f"🏦 Banka hareketi oluşturuldu: {banka_hareketleri.count()} adet")
+                for bh in banka_hareketleri:
+                    print(f"   - {bh.banka}: {bh.tutar} TL ({bh.tarih})")
+            else:
+                print("⚠️ Banka hareketi oluşturulamadı!")
+            
+            # Depozito hareketini kontrol et
+            from .models import DepozitoHareket
+            depo_hareketleri = DepozitoHareket.objects.filter(aidat=aidat)
+            if depo_hareketleri.exists():
+                print(f"💵 Depozito hareketi oluşturuldu: {depo_hareketleri.count()} adet")
+                for dh in depo_hareketleri:
+                    print(f"   - {dh.depozito}: {dh.tutar} TL ({dh.hareket_tipi})")
+            else:
+                print("⚠️ Depozito hareketi oluşturulamadı!")
+            
+        else:
+            # Hata mesajı
+            messages.error(request, f"❌ Ödeme sırasında hata: {message}")
+            print(f"❌ Hata: {message}")
+        
+        print("="*60 + "\n")
+        
+        return redirect('aidat_gecmisi')
+        
+    except DaireKullanici.DoesNotExist:
+        messages.error(request, "Profiliniz bulunamadı.")
+        return redirect('/portal/login/')
+    except Exception as e:
+        print(f"❌ Beklenmeyen hata: {e}")
+        import traceback
+        traceback.print_exc()
+        messages.error(request, f"Ödeme sırasında bir hata oluştu: {str(e)}")
+        return redirect('aidat_gecmisi')

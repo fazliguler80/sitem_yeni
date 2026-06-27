@@ -20,6 +20,7 @@ urlpatterns = [
     
     # Aidat ve Borç
     path('aidat/', portal_views.aidat_gecmisi, name='aidat_gecmisi'),
+    path('aidat-ode/<int:aidat_id>/', portal_views.aidat_ode, name='aidat_ode'),  # 🆕 YENİ EKLENDİ!
     path('borc/', portal_views.borc_durumu, name='borc_durumu'),
     
     # Komşular
