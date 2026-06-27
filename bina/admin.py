@@ -1130,104 +1130,74 @@ class RaporlarAdmin(admin.AdminSite):
         
         toplam_aidat_geliri = aidatlar.aggregate(Sum('tutar'))['tutar__sum'] or 0
         
-        # ========== 3. DEPOZİTO GELİRLERİ (SADECE DEPOZİTOHAREKET) ==========
-        # Depozito gelirleri sadece DepozitoHareket üzerinden hesaplanır
+        # ========== 3. DEPOZİTO GELİRLERİ ==========
+        # 3a. Başlangıç depozitoları (Depozito modeli - alinma_tarihi)
         if baslangic and bitis:
-            # Depozito eklemeleri (başlangıç depozitoları + ekstra eklemeler)
+            depozito_alinan = Depozito.objects.filter(
+                alinma_tarihi__range=[baslangic, bitis]
+            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
+        elif ay:
+            depozito_alinan = Depozito.objects.filter(
+                alinma_tarihi__year=yil,
+                alinma_tarihi__month=ay
+            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
+        else:
+            depozito_alinan = Depozito.objects.filter(
+                alinma_tarihi__year=yil
+            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
+        
+        # 3b. Depozito eklemeleri (DepozitoHareket - ekleme) - ekstra depozito eklemeleri
+        if baslangic and bitis:
             depozito_eklemeler = DepozitoHareket.objects.filter(
                 tarih__range=[baslangic, bitis],
                 hareket_tipi='ekleme'
+            ).exclude(
+                aidat__isnull=False  # Yuvarlama farklarını hariç tut
             ).aggregate(Sum('tutar'))['tutar__sum'] or 0
-            
-            # Depozito iadeleri (çıkış)
-            depozito_iadeler = DepozitoHareket.objects.filter(
-                tarih__range=[baslangic, bitis],
-                hareket_tipi='iade'
-            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
-            
-            # Depozito çıkarmalar (düşümler - yuvarlama farkı çıkarmaları)
-            depozito_cikarmalar = DepozitoHareket.objects.filter(
-                tarih__range=[baslangic, bitis],
-                hareket_tipi='cikarma'
-            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
-            
-            # Yuvarlama farkları (aidat ilişkisi olan eklemeler)
-            yuvarlama_eklenen = DepozitoHareket.objects.filter(
-                tarih__range=[baslangic, bitis],
-                hareket_tipi='ekleme',
-                aidat__isnull=False
-            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
-            
-            # Yuvarlama farkı çıkarmaları
-            yuvarlama_cikarilan = DepozitoHareket.objects.filter(
-                tarih__range=[baslangic, bitis],
-                hareket_tipi='cikarma',
-                aidat__isnull=False
-            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
-            
-            # Normal depozito eklemeleri (aidat ilişkisi olmayan - başlangıç depozitoları)
-            normal_depozito_eklemeler = DepozitoHareket.objects.filter(
-                tarih__range=[baslangic, bitis],
-                hareket_tipi='ekleme',
-                aidat__isnull=True
-            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
-            
         elif ay:
             depozito_eklemeler = DepozitoHareket.objects.filter(
                 tarih__year=yil,
                 tarih__month=ay,
                 hareket_tipi='ekleme'
-            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
-            
-            depozito_iadeler = DepozitoHareket.objects.filter(
-                tarih__year=yil,
-                tarih__month=ay,
-                hareket_tipi='iade'
-            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
-            
-            depozito_cikarmalar = DepozitoHareket.objects.filter(
-                tarih__year=yil,
-                tarih__month=ay,
-                hareket_tipi='cikarma'
-            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
-            
-            yuvarlama_eklenen = DepozitoHareket.objects.filter(
-                tarih__year=yil,
-                tarih__month=ay,
-                hareket_tipi='ekleme',
+            ).exclude(
                 aidat__isnull=False
             ).aggregate(Sum('tutar'))['tutar__sum'] or 0
-            
-            yuvarlama_cikarilan = DepozitoHareket.objects.filter(
-                tarih__year=yil,
-                tarih__month=ay,
-                hareket_tipi='cikarma',
-                aidat__isnull=False
-            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
-            
-            normal_depozito_eklemeler = DepozitoHareket.objects.filter(
-                tarih__year=yil,
-                tarih__month=ay,
-                hareket_tipi='ekleme',
-                aidat__isnull=True
-            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
-            
         else:
             depozito_eklemeler = DepozitoHareket.objects.filter(
                 tarih__year=yil,
                 hareket_tipi='ekleme'
+            ).exclude(
+                aidat__isnull=False
+            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
+        
+        # 3c. Yuvarlama farkları (aidat ilişkisi olan DepozitoHareket - ekleme)
+        if baslangic and bitis:
+            yuvarlama_eklenen = DepozitoHareket.objects.filter(
+                tarih__range=[baslangic, bitis],
+                hareket_tipi='ekleme',
+                aidat__isnull=False
             ).aggregate(Sum('tutar'))['tutar__sum'] or 0
             
-            depozito_iadeler = DepozitoHareket.objects.filter(
+            yuvarlama_cikarilan = DepozitoHareket.objects.filter(
+                tarih__range=[baslangic, bitis],
+                hareket_tipi='cikarma',
+                aidat__isnull=False
+            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
+        elif ay:
+            yuvarlama_eklenen = DepozitoHareket.objects.filter(
                 tarih__year=yil,
-                hareket_tipi='iade'
+                tarih__month=ay,
+                hareket_tipi='ekleme',
+                aidat__isnull=False
             ).aggregate(Sum('tutar'))['tutar__sum'] or 0
             
-            depozito_cikarmalar = DepozitoHareket.objects.filter(
+            yuvarlama_cikarilan = DepozitoHareket.objects.filter(
                 tarih__year=yil,
-                hareket_tipi='cikarma'
+                tarih__month=ay,
+                hareket_tipi='cikarma',
+                aidat__isnull=False
             ).aggregate(Sum('tutar'))['tutar__sum'] or 0
-            
+        else:
             yuvarlama_eklenen = DepozitoHareket.objects.filter(
                 tarih__year=yil,
                 hareket_tipi='ekleme',
@@ -1239,21 +1209,61 @@ class RaporlarAdmin(admin.AdminSite):
                 hareket_tipi='cikarma',
                 aidat__isnull=False
             ).aggregate(Sum('tutar'))['tutar__sum'] or 0
+        
+        # 3d. Depozito iadeleri (çıkış)
+        if baslangic and bitis:
+            depozito_iadeler = DepozitoHareket.objects.filter(
+                tarih__range=[baslangic, bitis],
+                hareket_tipi='iade'
+            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
             
-            normal_depozito_eklemeler = DepozitoHareket.objects.filter(
+            depozito_cikarmalar = DepozitoHareket.objects.filter(
+                tarih__range=[baslangic, bitis],
+                hareket_tipi='cikarma',
+                aidat__isnull=True  # Yuvarlama farkı olmayanlar
+            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
+        elif ay:
+            depozito_iadeler = DepozitoHareket.objects.filter(
                 tarih__year=yil,
-                hareket_tipi='ekleme',
+                tarih__month=ay,
+                hareket_tipi='iade'
+            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
+            
+            depozito_cikarmalar = DepozitoHareket.objects.filter(
+                tarih__year=yil,
+                tarih__month=ay,
+                hareket_tipi='cikarma',
+                aidat__isnull=True
+            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
+        else:
+            depozito_iadeler = DepozitoHareket.objects.filter(
+                tarih__year=yil,
+                hareket_tipi='iade'
+            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
+            
+            depozito_cikarmalar = DepozitoHareket.objects.filter(
+                tarih__year=yil,
+                hareket_tipi='cikarma',
                 aidat__isnull=True
             ).aggregate(Sum('tutar'))['tutar__sum'] or 0
         
-        # Depozito toplam geliri (sadece eklemeler - iadeler - çıkarmalar)
-        toplam_depozito_geliri = float(depozito_eklemeler) - float(depozito_iadeler) - float(depozito_cikarmalar)
+        # ========== 4. TOPLAMLAR ==========
+        # Toplam depozito geliri = başlangıç depozitoları + ekstra eklemeler + yuvarlama eklemeler
+        toplam_depozito_geliri = float(depozito_alinan) + float(depozito_eklemeler) + float(yuvarlama_eklenen)
         
-        # Yuvarlama toplamı
+        # Toplam depozito çıkışı = iadeler + çıkarmalar + yuvarlama çıkarmalar
+        toplam_depozito_cikisi = float(depozito_iadeler) + float(depozito_cikarmalar) + float(yuvarlama_cikarilan)
+        
+        # Net depozito
+        net_depozito = toplam_depozito_geliri - toplam_depozito_cikisi
+        
+        # Toplam yuvarlama
         toplam_yuvarlama = float(yuvarlama_eklenen) - float(yuvarlama_cikarilan)
         
-        # ========== 4. TOPLAMLAR ==========
-        toplam_gelir = float(toplam_aidat_geliri) + float(depozito_eklemeler)
+        # Toplam gelir
+        toplam_gelir = float(toplam_aidat_geliri) + toplam_depozito_geliri
+        
+        # Net durum
         net_durum = toplam_gelir - float(toplam_gider)
         
         # Aylar için Türkçe isimler
@@ -1277,12 +1287,14 @@ class RaporlarAdmin(admin.AdminSite):
             # Aidat
             'toplam_aidat_geliri': toplam_aidat_geliri,
             
-            # Depozito (sadece DepozitoHareket)
+            # Depozito
+            'depozito_alinan': depozito_alinan,
             'depozito_eklemeler': depozito_eklemeler,
             'depozito_iadeler': depozito_iadeler,
             'depozito_cikarmalar': depozito_cikarmalar,
-            'normal_depozito_eklemeler': normal_depozito_eklemeler,
+            'net_depozito': net_depozito,
             'toplam_depozito_geliri': toplam_depozito_geliri,
+            'toplam_depozito_cikisi': toplam_depozito_cikisi,
             
             # Yuvarlama
             'yuvarlama_eklenen': yuvarlama_eklenen,
