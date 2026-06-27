@@ -1742,11 +1742,34 @@ class RaporlarAdmin(admin.AdminSite):
                 ]
             }
             
-            yedekleme_app = {
+            # ========== SİSTEM BÖLÜMÜ - GÜNCELLENDİ ==========
+            sistem_app = {
                 'name': '⚙️ SİSTEM',
                 'app_label': 'sistem',
                 'app_url': '#',
                 'models': [
+                    # Log Kayıtları
+                    {
+                        'name': '📋 Günlük Kayıtları (Log)',
+                        'object_name': 'logentry',
+                        'admin_url': '/admin/admin/logentry/',
+                        'view_only': True,
+                    },
+                    # İçerik Türleri
+                    {
+                        'name': '📦 İçerik Türleri',
+                        'object_name': 'contenttype',
+                        'admin_url': '/admin/contenttypes/contenttype/',
+                        'view_only': True,
+                    },
+                    # Oturumlar
+                    {
+                        'name': '🔐 Oturumlar',
+                        'object_name': 'session',
+                        'admin_url': '/admin/sessions/session/',
+                        'view_only': True,
+                    },
+                    # Yedekleme
                     {
                         'name': '💾 Veritabanı Yedekle (İndir)',
                         'object_name': 'yedekle',
@@ -1765,10 +1788,50 @@ class RaporlarAdmin(admin.AdminSite):
             # Raporlar bölümünü en başa ekle
             app_list.insert(0, rapor_app)
             
-            # Yedekleme bölümünü en sona ekle
-            app_list.append(yedekleme_app)
+            # Sistem bölümünü en sona ekle (yedekleme ile birleştirildi)
+            app_list.append(sistem_app)
         
         return app_list
+    
+# bina/admin.py - LogEntryAdmin sınıfını ekleyin
+
+from django.contrib.admin.models import LogEntry
+
+class LogEntryAdmin(admin.ModelAdmin):
+    list_display = ('action_time', 'user', 'content_type', 'object_repr', 'action_flag_display', 'change_message')
+    list_filter = ('action_time', 'user', 'content_type')
+    search_fields = ('object_repr', 'change_message')
+    date_hierarchy = 'action_time'
+    readonly_fields = ('action_time', 'user', 'content_type', 'object_id', 'object_repr', 'action_flag', 'change_message')
+    
+    def has_add_permission(self, request):
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        # Sadece superuser silebilir
+        return request.user.is_superuser
+    
+    def action_flag_display(self, obj):
+        action_flags = {
+            1: '➕ Ekleme',
+            2: '✏️ Değiştirme',
+            3: '🗑️ Silme',
+        }
+        return action_flags.get(obj.action_flag, obj.action_flag)
+    action_flag_display.short_description = 'İşlem Türü'
+    
+    fieldsets = (
+        ('İşlem Bilgileri', {
+            'fields': ('action_time', 'user', 'content_type', 'object_id', 'object_repr')
+        }),
+        ('İşlem Detayı', {
+            'fields': ('action_flag', 'change_message')
+        }),
+    )
+
 
 # ==================== PERSONEL / MAAŞ ADMIN ====================
 
@@ -3131,3 +3194,4 @@ admin_site.register(Depozito, DepozitoAdmin)
 admin_site.register(DepozitoHareket, DepozitoHareketAdmin)
 admin_site.register(Fatura)
 admin_site.register(BankaHareket, BankaHareketAdmin)
+admin_site.register(LogEntry, LogEntryAdmin)
