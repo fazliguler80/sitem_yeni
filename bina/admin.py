@@ -531,6 +531,8 @@ class AidatAdmin(TarihFiltresiMixin, admin.ModelAdmin):
         }),
     )
     
+    # bina/admin.py - AidatAdmin save_model metodu (depozito kısmı)
+
     def save_model(self, request, obj, form, change):
         """
         Aidat kaydedilirken:
@@ -558,21 +560,21 @@ class AidatAdmin(TarihFiltresiMixin, admin.ModelAdmin):
             try:
                 eski = Aidat.objects.get(pk=obj.pk)
                 
-                # Ödeme durumu değişti mi?
                 if eski.odeme_yapildi_mi != obj.odeme_yapildi_mi:
                     
                     if obj.odeme_yapildi_mi:
                         # ===== ÖDEME YAPILDI =====
                         print(f"\n🔔 Admin: Aidat ödendi - {obj.daire} {obj.ay}/{obj.yil}")
+                        print(f"   Yuvarlama farkı: {obj.yuvarlama_farki}")
                         
                         if not obj.odeme_tarihi:
                             obj.odeme_tarihi = date.today()
                         
-                        # Banka hareketi oluştur
+                        # ===== BANKA HAREKETİ =====
                         ana_hesap = Banka.objects.filter(ana_hesap_mi=True).first()
                         if ana_hesap:
                             try:
-                                BankaHareket.objects.create(
+                                banka_hareket = BankaHareket.objects.create(
                                     banka=ana_hesap,
                                     hareket_tipi='gelir',
                                     tutar=obj.tutar,
@@ -583,48 +585,53 @@ class AidatAdmin(TarihFiltresiMixin, admin.ModelAdmin):
                                 )
                                 ana_hesap.guncel_bakiye = float(ana_hesap.guncel_bakiye) + float(obj.tutar)
                                 ana_hesap.save()
-                                print(f"  ✅ Banka hareketi oluşturuldu")
+                                print(f"  ✅ Banka hareketi oluşturuldu ID: {banka_hareket.id}")
                             except Exception as e:
                                 print(f"  ❌ Banka hareketi hatası: {e}")
                         else:
                             print("  ❌ Ana hesap bulunamadı!")
                         
-                        # Depozito hareketi oluştur (yuvarlama farkı varsa)
+                        # ===== DEPOZİTO HAREKETİ (Yuvarlama farkı) =====
                         if obj.yuvarlama_farki and float(obj.yuvarlama_farki) != 0:
+                            print(f"  Depozito işlemi başlıyor...")
                             depozito = Depozito.objects.filter(daire=obj.daire, durum='alindi').first()
+                            print(f"  Depozito bulundu mu: {depozito is not None}")
+                            
                             if depozito:
                                 fark = float(obj.yuvarlama_farki)
+                                print(f"  Fark: {fark} TL, tip: {'ekleme' if fark > 0 else 'cikarma'}")
+                                
                                 try:
-                                    DepozitoHareket.objects.create(
+                                    depo_hareket = DepozitoHareket.objects.create(
                                         depozito=depozito,
                                         hareket_tipi='ekleme' if fark > 0 else 'cikarma',
                                         tutar=Decimal(str(abs(fark))),
                                         tarih=obj.odeme_tarihi or date.today(),
                                         aciklama=f"{obj.aciklama} (Yuvarlama farkı: {fark:+.2f} TL)",
                                         gider=obj.gider,
-                                        aidat=obj
+                                        aidat=obj  # ← ARTIK ÇALIŞACAK!
                                     )
-                                    print(f"  ✅ Depozito hareketi oluşturuldu: {fark} TL")
+                                    print(f"  ✅ Depozito hareketi oluşturuldu ID: {depo_hareket.id}")
+                                    print(f"     Depozito: {depozito.daire}, Tutar: {depo_hareket.tutar} TL")
                                 except Exception as e:
                                     print(f"  ❌ Depozito hareketi hatası: {e}")
+                                    import traceback
+                                    traceback.print_exc()
                             else:
                                 print("  ❌ Depozito bulunamadı!")
                         else:
-                            print("  Yuvarlama farkı 0, depozito işlemi atlandı")
+                            print(f"  Yuvarlama farkı 0, depozito işlemi atlandı")
                     
                     else:
                         # ===== ÖDEME İPTAL EDİLDİ =====
                         print(f"\n🔔 Admin: Aidat ödemesi iptal edildi - {obj.daire} {obj.ay}/{obj.yil}")
                         
-                        # Banka hareketlerini sil
                         silinen_banka = BankaHareket.objects.filter(aidat=obj).delete()
                         print(f"  Silinen banka hareketi sayısı: {silinen_banka[0]}")
                         
-                        # Depozito hareketlerini sil
                         silinen_depo = DepozitoHareket.objects.filter(aidat=obj).delete()
                         print(f"  Silinen depozito hareketi sayısı: {silinen_depo[0]}")
                         
-                        # Ödeme tarihini temizle
                         obj.odeme_tarihi = None
                         
             except Aidat.DoesNotExist:

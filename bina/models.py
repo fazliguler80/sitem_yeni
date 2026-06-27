@@ -1332,6 +1332,8 @@ class Depozito(models.Model):
         verbose_name_plural = "Depozitolar"
 
 
+# bina/models.py - DepozitoHareket modelini GÜNCELLEYİN
+
 class DepozitoHareket(models.Model):
     """Depozitoya yapılan ekleme/çıkarma hareketleri (yuvarlama fazlalıkları vb.)"""
     HAREKET_TIPI = [
@@ -1349,12 +1351,23 @@ class DepozitoHareket(models.Model):
     # Bağlı olduğu gider (yakıt hesaplamasındaki yuvarlama için)
     gider = models.ForeignKey('Gider', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Bağlı Gider")
     
+    # ========== YENİ EKLENEN ALAN ==========
+    aidat = models.ForeignKey(
+        'Aidat', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        verbose_name="Bağlı Aidat",
+        related_name='depozito_hareketleri'
+    )
+    
     def __str__(self):
         return f"{self.depozito.daire} - {self.get_hareket_tipi_display()} - {self.tutar} TL"
     
     class Meta:
         verbose_name = "Depozito Hareketi"
         verbose_name_plural = "Depozito Hareketleri"
+        ordering = ['-tarih']
 
 from django.db.models.signals import post_save
 from django.dispatch import receiver

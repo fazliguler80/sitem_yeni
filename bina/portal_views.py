@@ -372,6 +372,7 @@ def sifre_sifirla_confirm(request, uidb64, token):
 def depozito_gecmisi(request):
     """
     Portal kullanıcısının depozito geçmişini gösterir.
+    Yuvarlama farkları aidat ilişkisi üzerinden tespit edilir.
     """
     
     try:
@@ -396,7 +397,7 @@ def depozito_gecmisi(request):
         }
         return render(request, 'portal/depozito_gecmisi.html', context)
     
-    # Depozito hareketlerini al
+    # Depozito hareketlerini al (aidat ilişkisi ile birlikte)
     hareketler = depozito.hareketler.all().order_by('tarih', 'id')
     
     # Bakiye hesaplama ve hareketleri zenginleştirme
@@ -423,11 +424,28 @@ def depozito_gecmisi(request):
             renk = 'warning'
             islem_aciklama = 'İade Edildi'
         
-        # Yuvarlama kaynaklı mı kontrol et
-        yuvarlama_mi = 'yuvarlama' in hareket.aciklama.lower()
+        # ========== YUVARLAMA KONTROLÜ - GELİŞTİRİLDİ ==========
+        # 1. Aidat ilişkisi varsa
+        # 2. Veya açıklamada 'yuvarlama' kelimesi geçiyorsa
+        yuvarlama_mi = False
+        aidat_bilgisi = None
+        
+        if hareket.aidat is not None:
+            yuvarlama_mi = True
+            aidat_bilgisi = f"{hareket.aidat.ay}/{hareket.aidat.yil}"
+        elif 'yuvarlama' in hareket.aciklama.lower():
+            yuvarlama_mi = True
+            # Açıklamadan dönem bilgisini çıkarmaya çalış
+            import re
+            match = re.search(r'(\d+)/(\d+)', hareket.aciklama)
+            if match:
+                aidat_bilgisi = f"{match.group(1)}/{match.group(2)}"
         
         if yuvarlama_mi:
-            yuvarlama_hareketleri.append(hareket)
+            yuvarlama_hareketleri.append({
+                'hareket': hareket,
+                'aidat_bilgisi': aidat_bilgisi
+            })
             if hareket.hareket_tipi == 'ekleme':
                 toplam_yuvarlama_eklenen += float(hareket.tutar)
             elif hareket.hareket_tipi == 'cikarma':
@@ -445,17 +463,20 @@ def depozito_gecmisi(request):
             'bakiye': bakiye,
             'aciklama': hareket.aciklama,
             'yuvarlama_mi': yuvarlama_mi,
+            'aidat_bilgisi': aidat_bilgisi,
             'gider': hareket.gider,
+            'aidat': hareket.aidat,  # Aidat objesi
         })
     
     site_ayar = SiteAyarlari.objects.first()
     
     # Debug için yazdır
     print(f"\n=== DEPOZITO OZETI ===")
+    print(f"Toplam depozito: {depozito.tutar} TL")
+    print(f"Guncel bakiye: {bakiye} TL")
     print(f"Yuvarlama hareket sayısı: {len(yuvarlama_hareketleri)}")
     print(f"Toplam yuvarlama eklenen: {toplam_yuvarlama_eklenen}")
     print(f"Toplam yuvarlama cikarilan: {toplam_yuvarlama_cikarilan}")
-    print(f"Guncel bakiye: {bakiye}")
     
     context = {
         'daire': daire,
