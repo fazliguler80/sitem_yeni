@@ -33,7 +33,6 @@ from django.contrib.admin import SimpleListFilter
 from datetime import date
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.sessions.models import Session
-from django.contrib.sessions.admin import SessionAdmin
 
 from .models import (
     SiteAyarlari, Blok, Daire, Kisi, DaireIliskisi, 
