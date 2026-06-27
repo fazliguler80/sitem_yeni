@@ -48,12 +48,6 @@ from django.urls import path
 from django.utils.html import format_html
 from datetime import datetime, timedelta
 
-# Admin sitesi - BURASI ÖNEMLİ
-admin_site = RaporlarAdmin(name='myadmin')
-admin_site.site_header = "SİTE YÖNETİM PANELİ"
-admin_site.site_title = "SİTE YÖNETİM PANELİ"
-admin_site.index_title = "YÖNETİM PANELİNE HOŞ GELDİNİZ"
-
 class TarihFiltresiMixin:
     """Admin liste ekranlarına hızlı tarih filtresi ekleyen mixin"""
     
@@ -1807,7 +1801,13 @@ class RaporlarAdmin(admin.AdminSite):
             app_list.append(sistem_app)
         
         return app_list
-    
+
+# Admin sitesi - BURASI ÖNEMLİ
+admin_site = RaporlarAdmin(name='myadmin')
+admin_site.site_header = "SİTE YÖNETİM PANELİ"
+admin_site.site_title = "SİTE YÖNETİM PANELİ"
+admin_site.index_title = "YÖNETİM PANELİNE HOŞ GELDİNİZ"
+
 # bina/admin.py - LogEntryAdmin sınıfını ekleyin
 
 from django.contrib.admin.models import LogEntry
