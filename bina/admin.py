@@ -754,6 +754,120 @@ class AidatAdmin(TarihFiltresiMixin, admin.ModelAdmin):
         return super().changelist_view(request, extra_context=extra_context)
 
 class RaporlarAdmin(admin.AdminSite):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Varsayılan değerler
+        self._site_header = "SİTE YÖNETİM PANELİ"
+        self._site_title = "SİTE YÖNETİM PANELİ"
+        self._index_title = "YÖNETİM PANELİNE HOŞ GELDİNİZ"
+    
+    @property
+    def site_header(self):
+        """Dinamik site başlığı"""
+        return self._get_dynamic_title()
+    
+    @site_header.setter
+    def site_header(self, value):
+        self._site_header = value
+    
+    @property
+    def site_title(self):
+        """Dinamik site başlığı"""
+        return self._get_dynamic_title()
+    
+    @site_title.setter
+    def site_title(self, value):
+        self._site_title = value
+    
+    @property
+    def index_title(self):
+        """Dinamik index başlığı"""
+        return self._get_dynamic_title()
+    
+    @index_title.setter
+    def index_title(self, value):
+        self._index_title = value
+    
+    def _get_dynamic_title(self):
+        """Aktif siteye göre başlık döndür"""
+        try:
+            from django.contrib.auth.models import User
+            from .models import Site, DaireKullanici
+            
+            # Admin panelinde oturum açmış kullanıcıyı bul
+            import sys
+            for frame in sys._current_frames().values():
+                if 'request' in frame.f_locals:
+                    request = frame.f_locals['request']
+                    if hasattr(request, 'user') and request.user.is_authenticated:
+                        user = request.user
+                        break
+            else:
+                return "SİTE YÖNETİM PANELİ"
+            
+            # Kullanıcının bağlı olduğu siteyi bul
+            try:
+                daire_kullanici = DaireKullanici.objects.filter(kullanici=user).first()
+                if daire_kullanici and daire_kullanici.daire:
+                    # Dairenin sitesini bul (site alanı varsa)
+                    site = daire_kullanici.daire.site
+                    if site:
+                        return f"{site.adi} YÖNETİM PANELİ"
+                else:
+                    # Admin kullanıcısıysa (site admini)
+                    site = Site.objects.filter(admin_user=user, aktif=True).first()
+                    if site:
+                        return f"{site.adi} YÖNETİM PANELİ"
+            except:
+                pass
+            
+            # Session'dan site bilgisini al
+            try:
+                if hasattr(request, 'session'):
+                    site_id = request.session.get('aktif_site_id') or request.session.get('portal_site_id')
+                    if site_id:
+                        site = Site.objects.filter(id=site_id, aktif=True).first()
+                        if site:
+                            return f"{site.adi} YÖNETİM PANELİ"
+            except:
+                pass
+            
+            return "SİTE YÖNETİM PANELİ"
+            
+        except Exception as e:
+            print(f"Başlık hatası: {e}")
+            return "SİTE YÖNETİM PANELİ"
+    
+    def each_context(self, request):
+        """Admin template'lerine ek context gönder"""
+        context = super().each_context(request)
+        
+        # Aktif siteyi bul
+        aktif_site = None
+        try:
+            from .models import Site
+            
+            # Session'dan site ID'yi al
+            site_id = request.session.get('aktif_site_id') or request.session.get('portal_site_id')
+            if site_id:
+                try:
+                    aktif_site = Site.objects.get(id=site_id, aktif=True)
+                except Site.DoesNotExist:
+                    aktif_site = Site.objects.filter(aktif=True).first()
+            else:
+                aktif_site = Site.objects.filter(aktif=True).first()
+                
+            if aktif_site:
+                context['aktif_site'] = aktif_site
+                context['site_header'] = f"{aktif_site.adi} YÖNETİM PANELİ"
+                context['site_title'] = f"{aktif_site.adi} YÖNETİM PANELİ"
+                context['index_title'] = f"{aktif_site.adi} YÖNETİM PANELİNE HOŞ GELDİNİZ"
+        except:
+            pass
+        
+        return context
+
     def index(self, request, extra_context=None):
         """Ana sayfaya rapor menüsünü ekle"""
         extra_context = extra_context or {}
