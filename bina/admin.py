@@ -1689,6 +1689,8 @@ class RaporlarAdmin(admin.AdminSite):
         return JsonResponse({'status': 'error', 'message': 'Geçersiz istek!'})
 
         
+    # bina/admin.py - RaporlarAdmin sınıfı içinde get_app_list metodunu güncelleyin
+
     def get_app_list(self, request, app_label=None):
         # Mevcut app_list'i al
         try:
@@ -1746,7 +1748,7 @@ class RaporlarAdmin(admin.AdminSite):
                 ]
             }
             
-            # ========== SİSTEM BÖLÜMÜ (TÜM SİSTEM MODELLERİ) ==========
+            # ========== SİSTEM BÖLÜMÜ ==========
             sistem_app = {
                 'name': '⚙️ SİSTEM',
                 'app_label': 'sistem',
@@ -1785,14 +1787,17 @@ class RaporlarAdmin(admin.AdminSite):
                 ]
             }
             
-            # ========== TÜM BÖLÜMLERDEN SİSTEM MODELLERİNİ KALDIR ==========
-            # Hangi app_label'lerden sistem modellerini kaldıracağımızı belirleyelim
-            sistem_modelleri = ['logentry', 'contenttype', 'session']
+            # ========== ÇİFT KAYITLARI GİZLE (SADECE DJANGO'NUN VARSayılan BÖLÜMLERİNDEN) ==========
+            # Bu modeller sadece SİSTEM bölümünde görünsün
+            gizlenecek_modeller = ['logentry', 'contenttype', 'session']
             
             for app in app_list:
-                # 'admin', 'auth', 'contenttypes', 'sessions' bölümlerinden sistem modellerini kaldır
+                # 'admin', 'auth', 'contenttypes', 'sessions' bölümlerinden gizle
                 if app['app_label'] in ['admin', 'auth', 'contenttypes', 'sessions']:
-                    app['models'] = [m for m in app['models'] if m['object_name'] not in sistem_modelleri]
+                    app['models'] = [
+                        m for m in app['models'] 
+                        if m['object_name'] not in gizlenecek_modeller
+                    ]
             
             # Raporlar bölümünü en başa ekle
             app_list.insert(0, rapor_app)
