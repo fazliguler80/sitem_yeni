@@ -783,7 +783,7 @@ class AidatAdmin(TarihFiltresiMixin, BaseSiteAdmin):
         
         return super().changelist_view(request, extra_context=extra_context)
 
-class RaporlarAdmin(BaseSiteAdmin):
+class RaporlarAdmin(admin.AdminSite):
 
      
     @property
