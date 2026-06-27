@@ -1689,6 +1689,8 @@ class RaporlarAdmin(admin.AdminSite):
         return JsonResponse({'status': 'error', 'message': 'Geçersiz istek!'})
 
     
+    # bina/admin.py - RaporlarAdmin sınıfı içinde get_app_list metodunu güncelleyin
+
     def get_app_list(self, request, app_label=None):
         # Mevcut app_list'i al
         try:
@@ -1701,6 +1703,7 @@ class RaporlarAdmin(admin.AdminSite):
         
         # Raporlar bölümünü oluştur (sadece ana sayfa için)
         if app_label is None:
+            # ========== RAPORLAR BÖLÜMÜ ==========
             rapor_app = {
                 'name': '📊 RAPORLAR',
                 'app_label': 'raporlar',
@@ -1745,29 +1748,28 @@ class RaporlarAdmin(admin.AdminSite):
                 ]
             }
             
-            # ========== SİSTEM BÖLÜMÜ - URL'LER DÜZELTİLDİ ==========
+            # ========== SİSTEM BÖLÜMÜ (TÜM SİSTEM MODELLERİ) ==========
             sistem_app = {
                 'name': '⚙️ SİSTEM',
                 'app_label': 'sistem',
                 'app_url': '#',
                 'models': [
-                    # LogEntry'yi KALDIRIN (zaten Yönetim bölümünde var)
-                    #{
-                     #   'name': '📋 Günlük Kayıtları (Log)',
-                      #  'object_name': 'logentry',
-                       # 'admin_url': '/admin/admin/logentry/',  # ✅ DOĞRU
-                        #'view_only': True,
-                    #},
+                    {
+                        'name': '📋 Günlük Kayıtları (Log)',
+                        'object_name': 'logentry',
+                        'admin_url': '/admin/admin/logentry/',
+                        'view_only': True,
+                    },
                     {
                         'name': '📦 İçerik Türleri',
                         'object_name': 'contenttype',
-                        'admin_url': '/admin/contenttypes/contenttype/',  # 🔧 DÜZELTİLDİ
+                        'admin_url': '/admin/contenttypes/contenttype/',
                         'view_only': True,
                     },
                     {
                         'name': '🔐 Oturumlar',
                         'object_name': 'session',
-                        'admin_url': '/admin/sessions/session/',  # 🔧 DÜZELTİLDİ
+                        'admin_url': '/admin/sessions/session/',
                         'view_only': True,
                     },
                     {
@@ -1784,6 +1786,18 @@ class RaporlarAdmin(admin.AdminSite):
                     },
                 ]
             }
+            
+            # ========== AUTH BÖLÜMÜNDEN LOGENTRY'Yİ KALDIR ==========
+            # Mevcut app_list'te auth/admin bölümünü bul ve LogEntry'yi gizle
+            for app in app_list:
+                if app['app_label'] in ['admin', 'auth']:
+                    # LogEntry'yi kaldır
+                    app['models'] = [m for m in app['models'] if m['object_name'] != 'logentry']
+                    # ContentType'ı kaldır (zaten sistemde var)
+                    app['models'] = [m for m in app['models'] if m['object_name'] != 'contenttype']
+                    # Session'ı kaldır (zaten sistemde var)
+                    app['models'] = [m for m in app['models'] if m['object_name'] != 'session']
+                    break
             
             # Raporlar bölümünü en başa ekle
             app_list.insert(0, rapor_app)
