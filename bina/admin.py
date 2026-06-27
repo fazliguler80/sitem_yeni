@@ -157,9 +157,53 @@ class BlokFilter(SimpleListFilter):
             return queryset.filter(daire__blok__blok_adi=self.value())
         return queryset
 
+# ==================== BASE SITE ADMIN ====================
+class BaseSiteAdmin(admin.ModelAdmin):
+    """Tüm admin sınıflarının miras alacağı temel sınıf - Site bazlı filtreleme"""
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        site = self._get_user_site(request.user)
+        if site and hasattr(self.model, 'site'):
+            return qs.filter(site=site)
+        return qs.none()
+    
+    def save_model(self, request, obj, form, change):
+        if hasattr(obj, 'site') and not obj.site:
+            site = self._get_user_site(request.user)
+            if site:
+                obj.site = site
+        super().save_model(request, obj, form, change)
+    
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == 'site':
+            if request.user.is_superuser:
+                kwargs['queryset'] = Site.objects.filter(aktif=True)
+            else:
+                site = self._get_user_site(request.user)
+                if site:
+                    kwargs['queryset'] = Site.objects.filter(id=site.id)
+                else:
+                    kwargs['queryset'] = Site.objects.none()
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+    
+    def _get_user_site(self, user):
+        from .models import Site, DaireKullanici
+        try:
+            site = Site.objects.filter(admin_user=user, aktif=True).first()
+            if site:
+                return site
+            daire_kullanici = DaireKullanici.objects.filter(kullanici=user).first()
+            if daire_kullanici and daire_kullanici.daire:
+                return daire_kullanici.daire.site
+        except:
+            pass
+        return None
 
 # ==================== DAİRE İLİŞKİLERİ ADMIN ====================
-class DaireIliskisiAdmin(admin.ModelAdmin):
+class DaireIliskisiAdmin(BaseSiteAdmin):
     list_display = ['daire_bilgisi', 'kisi_bilgisi', 'iliski_tipi', 'baslangic_tarihi', 'bitis_tarihi', 'aktif_mi', 'kira_tutari']
     list_filter = ['aktif_mi', 'iliski_tipi', BlokFilter]
     list_editable = ['aktif_mi', 'birincil_mi']
@@ -211,14 +255,14 @@ class DaireIliskisiAdmin(admin.ModelAdmin):
         self.message_user(request, f"{queryset.count()} ilişki pasif yapıldı.")
     pasif_yap.short_description = "Seçili ilişkileri pasif yap"
 
-class YoneticiAdmin(admin.ModelAdmin):
+class YoneticiAdmin(BaseSiteAdmin):
     list_display = ('ad_soyad', 'gorev_tipi', 'telefon', 'email', 'gorev_baslangic', 'aktif_mi')
     list_filter = ('gorev_tipi', 'aktif_mi')
     search_fields = ('ad_soyad', 'email')
 
 # bina/admin.py - Düzeltilmiş DaireIliskisiInline
 
-class DaireIliskisiInline(admin.TabularInline):
+class DaireIliskisiInline(BaseSiteAdmin):
     """Kişi detay sayfasında daire ilişkilerini gösterir"""
     model = DaireIliskisi
     extra = 1
@@ -231,21 +275,7 @@ class DaireIliskisiInline(admin.TabularInline):
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
-class DaireIliskisiInline(admin.TabularInline):
-    """Kişi detay sayfasında daire ilişkilerini gösterir"""
-    model = DaireIliskisi
-    extra = 1
-    fields = ['daire', 'iliski_tipi', 'birincil_mi', 'aktif_mi', 'baslangic_tarihi', 'bitis_tarihi']
-    raw_id_fields = ['daire']  # Autocomplete yerine raw_id_fields kullan
-    # autocomplete_fields = ['daire']  # Bunu yorum satırı yapın veya silin
-    
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == "daire":
-            kwargs["queryset"] = Daire.objects.select_related('blok').order_by('blok__blok_adi', 'daire_no')
-        return super().formfield_for_foreignkey(db_field, request, **kwargs)
-
-
-class DaireIliskisiInlineForDaire(admin.TabularInline):
+class DaireIliskisiInlineForDaire(BaseSiteAdmin):
     """Daire detay sayfasında kişi ilişkilerini gösterir"""
     model = DaireIliskisi
     extra = 1
@@ -258,7 +288,7 @@ class DaireIliskisiInlineForDaire(admin.TabularInline):
             kwargs["queryset"] = Kisi.objects.order_by('ad_soyad')
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
-class KisiAdmin(admin.ModelAdmin):
+class KisiAdmin(BaseSiteAdmin):
     list_display = ['ad_soyad', 'kisi_tipi', 'diger_aciklama', 'telefon', 'email', 'aktif_mi', 'daire_bilgisi']
     list_filter = ['kisi_tipi', 'aktif_mi']
     search_fields = ['ad_soyad', 'telefon', 'email', 'tc_kimlik', 'diger_aciklama']
@@ -306,12 +336,12 @@ class KisiAdmin(admin.ModelAdmin):
             'all': ('admin/css/kisi_admin.css',)
         }
 
-class FirmaAdmin(admin.ModelAdmin):
+class FirmaAdmin(BaseSiteAdmin):
     list_display = ('firma_adi', 'tip', 'yetkili_kisi', 'telefon', 'sozlesme_bitis', 'aktif_mi')
     list_filter = ('tip', 'aktif_mi')
     search_fields = ('firma_adi', 'yetkili_kisi')
 
-class DaireAdmin(admin.ModelAdmin):
+class DaireAdmin(BaseSiteAdmin):
     list_display = ('blok', 'daire_no', 'kat', 'daire_tipi', 'malik_bilgisi', 
                     'isletme_giderlerinden_muaf', 'demirbas_giderlerinden_muaf', 'durum')
     list_filter = ('blok', 'daire_tipi', 'isletme_giderlerinden_muaf', 'demirbas_giderlerinden_muaf')
@@ -334,7 +364,7 @@ class DaireAdmin(admin.ModelAdmin):
     durum.boolean = True
     durum.short_description = 'Durum'
 
-class BankaAdmin(admin.ModelAdmin):
+class BankaAdmin(BaseSiteAdmin):
     list_display = ('banka_adi', 'hesap_adi', 'iban', 'guncel_bakiye')
     list_filter = ('hesap_tipi', 'aktif_mi')
     search_fields = ('banka_adi', 'hesap_adi', 'iban')
@@ -363,7 +393,7 @@ class BankaAdmin(admin.ModelAdmin):
         extra_context['toplam_bakiye'] = toplam
         return super().changelist_view(request, extra_context=extra_context)
 
-class BankaHareketAdmin(TarihFiltresiMixin, admin.ModelAdmin):
+class BankaHareketAdmin(TarihFiltresiMixin, BaseSiteAdmin):
     change_list_template = 'admin/banka_hareketleri_filtreli.html'
     tarih_alan = 'tarih'
     list_display = ('banka', 'hareket_tipi', 'tutar', 'tarih', 'aciklama')
@@ -502,7 +532,7 @@ class DaireFiltresi(SimpleListFilter):
 
 # bina/admin.py - AidatAdmin sınıfı
 
-class AidatAdmin(TarihFiltresiMixin, admin.ModelAdmin):
+class AidatAdmin(TarihFiltresiMixin, BaseSiteAdmin):
     tarih_alan = 'odeme_tarihi'
     list_display = ('daire', 'ay', 'yil', 'aidat_tipi', 'tutar', 'odeme_yapildi_mi', 'odeme_tarihi', 'kim_odedi_bilgisi')
     list_filter = (
@@ -753,7 +783,7 @@ class AidatAdmin(TarihFiltresiMixin, admin.ModelAdmin):
         
         return super().changelist_view(request, extra_context=extra_context)
 
-class RaporlarAdmin(admin.AdminSite):
+class RaporlarAdmin(BaseSiteAdmin):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1930,7 +1960,7 @@ admin_site.index_title = "YÖNETİM PANELİNE HOŞ GELDİNİZ"
 
 from django.contrib.admin.models import LogEntry
 
-class LogEntryAdmin(admin.ModelAdmin):
+class LogEntryAdmin(BaseSiteAdmin):
     list_display = ('action_time', 'user', 'content_type', 'object_repr', 'action_flag_display', 'change_message')
     list_filter = ('action_time', 'user', 'content_type')
     search_fields = ('object_repr', 'change_message')
@@ -1968,7 +1998,7 @@ class LogEntryAdmin(admin.ModelAdmin):
 # bina/admin.py - Diğer admin sınıflarının yanına ekleyin
 
 # ==================== CONTENT TYPE ADMIN ====================
-class CustomContentTypeAdmin(admin.ModelAdmin):
+class CustomContentTypeAdmin(BaseSiteAdmin):
     list_display = ('app_label', 'model', 'id')
     list_filter = ('app_label',)
     search_fields = ('app_label', 'model')
@@ -1985,7 +2015,7 @@ class CustomContentTypeAdmin(admin.ModelAdmin):
 
 
 # ==================== SESSION ADMIN ====================
-class CustomSessionAdmin(admin.ModelAdmin):
+class CustomSessionAdmin(BaseSiteAdmin):
     list_display = ('session_key', 'expire_date', 'get_user_id')
     list_filter = ('expire_date',)
     search_fields = ('session_key',)
@@ -2012,7 +2042,7 @@ from django.db.models import Sum
 from django.http import HttpResponse
 from .models import Personel, AsgariUcret, MaasBordrosu
 
-class PersonelAdmin(admin.ModelAdmin):
+class PersonelAdmin(BaseSiteAdmin):
     list_display = ['ad_soyad', 'unvan', 'brut_maas', 'maas_tipi', 'calisma_sekli', 'aktif']
     list_filter = ['aktif', 'calisma_sekli', 'sgk_tipi', 'maas_tipi']
     search_fields = ['ad_soyad', 'tc_kimlik']
@@ -2065,11 +2095,11 @@ class PersonelAdmin(admin.ModelAdmin):
         """
         return super().changeform_view(request, object_id, form_url, extra_context)
 
-class AsgariUcretAdmin(admin.ModelAdmin):
+class AsgariUcretAdmin(BaseSiteAdmin):
     list_display = ['yil', 'brut_ucret', 'isci_sgk_payi', 'isveren_sgk_payi']
     list_editable = ['brut_ucret']
 
-class GiderAdmin(TarihFiltresiMixin, admin.ModelAdmin):
+class GiderAdmin(TarihFiltresiMixin, BaseSiteAdmin):
     tarih_alan = 'tarih'
     list_display = ('tip', 'tutar', 'tarih', 'hesap_tipi', 'blok', 'muaf_daire_sayisi', 'aciklama', 'taksitlendir_button')
     list_filter = ('tip', 'tarih', 'hesap_tipi', 'blok')
@@ -2528,7 +2558,7 @@ class GiderAdmin(TarihFiltresiMixin, admin.ModelAdmin):
 
     
         
-class DepozitoAdmin(admin.ModelAdmin):
+class DepozitoAdmin(BaseSiteAdmin):
     list_display = ('daire', 'kisi', 'tutar', 'alinma_tarihi', 'durum', 'guncel_bakiye', 'hareket_ekle_button')
     list_filter = ('durum', 'alinma_tarihi')
     search_fields = ('daire__blok__blok_adi', 'daire__daire_no', 'kisi__ad_soyad')
@@ -2698,7 +2728,7 @@ class DepozitoAdmin(admin.ModelAdmin):
         return render(request, 'admin/toplu_depozito_hareketi.html', context)
     toplu_depozito_hareketi_ekle.short_description = "Seçili depozitolara toplu hareket ekle"
 
-class DepozitoHareketAdmin(admin.ModelAdmin):
+class DepozitoHareketAdmin(BaseSiteAdmin):
     list_display = ('depozito', 'hareket_tipi', 'tutar', 'tarih', 'aciklama')
     list_filter = ('hareket_tipi', 'tarih')
     search_fields = ('aciklama',)
@@ -2724,7 +2754,7 @@ class DepozitoHareketAdmin(admin.ModelAdmin):
         extra_context['toplam_iade'] = iade
         return super().changelist_view(request, extra_context=extra_context)
 
-class MaasBordrosuAdmin(admin.ModelAdmin):
+class MaasBordrosuAdmin(BaseSiteAdmin):
     list_display = ['personel', 'ay_goster', 'yil', 'brut_maas', 'net_maas', 'isveren_toplam_maliyet']
     list_filter = ['yil', 'ay']
     search_fields = ['personel__ad_soyad']
@@ -2879,7 +2909,7 @@ from django.utils.safestring import mark_safe
 import random
 import string
 
-class DaireKullaniciAdmin(admin.ModelAdmin):
+class DaireKullaniciAdmin(BaseSiteAdmin):
     list_display = ('get_kisi_adi', 'daire', 'telefon', 'email', 'sifre_durumu', 'sifre_belirle', 'aktif')
     list_filter = ('aktif', 'daire__blok', 'sifre_sifirlandi_mi')
     search_fields = ('kisi__ad_soyad', 'daire__daire_no', 'telefon')
@@ -3113,7 +3143,7 @@ Not: Şifrenizi bilmiyorsanız yöneticiden yeni şifre talep edebilirsiniz.
 
 # bina/admin.py - TEK SiteAdmin sınıfı (çift tanımı düzeltin)
 
-class SiteAdmin(admin.ModelAdmin):
+class SiteAdmin(BaseSiteAdmin):
     list_display = ('adi', 'slug', 'aktif', 'admin_user', 'telefon', 'email')
     list_filter = ('aktif',)
     search_fields = ('adi', 'slug', 'adres', 'telefon', 'email')
@@ -3194,10 +3224,12 @@ from django.contrib.auth.models import User, Group, Permission
 from django.contrib.contenttypes.models import ContentType
 
 # ==================== KULLANICI ADMIN ====================
-class CustomUserAdmin(UserAdmin):
+# bina/admin.py - CustomUserAdmin sınıfını güncelleyin
+
+class CustomUserAdmin(UserAdmin, BaseSiteAdmin):  # BaseSiteAdmin EKLENDİ
     """Kullanıcı yönetimi için özel admin"""
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'is_active', 'date_joined')
-    list_filter = ('is_staff', 'is_active', 'is_superuser', 'groups')  # groups eklendi
+    list_filter = ('is_staff', 'is_active', 'is_superuser', 'groups')
     search_fields = ('username', 'email', 'first_name', 'last_name')
     ordering = ('-date_joined',)
     
@@ -3210,37 +3242,47 @@ class CustomUserAdmin(UserAdmin):
     
     list_editable = ('is_staff', 'is_active')
     
-    # Toplu işlemler için
     actions = ['toplu_grup_ata']
     
     def toplu_grup_ata(self, request, queryset):
-        """Seçili kullanıcıları bir gruba ata"""
-        from django.shortcuts import render
-        from django.http import HttpResponseRedirect
+        # ... mevcut kod ...
+    
+    def get_queryset(self, request):
+        """Sadece kullanıcının sitesine ait kullanıcıları göster"""
+        qs = super().get_queryset(request)
         
-        if request.method == 'POST':
-            group_id = request.POST.get('group')
-            if group_id:
-                group = Group.objects.get(id=group_id)
-                count = 0
-                for user in queryset:
-                    user.groups.add(group)
-                    count += 1
-                self.message_user(request, f'✅ {count} kullanıcı "{group.name}" grubuna eklendi.')
-                return HttpResponseRedirect(request.path_info)
+        if request.user.is_superuser:
+            return qs
         
-        groups = Group.objects.all()
-        return render(request, 'admin/toplu_grup_ata.html', {
-            'queryset': queryset,
-            'groups': groups,
-            'title': 'Toplu Grup Ata'
-        })
-    toplu_grup_ata.short_description = 'Seçili kullanıcıları gruba ata'
+        # Kullanıcının sitesini bul
+        site = self._get_user_site(request.user)
+        if site:
+            # Site admini olan kullanıcılar
+            site_admin_ids = Site.objects.filter(id=site.id).values_list('admin_user_id', flat=True)
+            # Daire kullanıcıları (daire üzerinden siteye bağlı)
+            daire_kullanici_ids = DaireKullanici.objects.filter(
+                daire__site=site
+            ).values_list('kullanici_id', flat=True)
+            # Her iki grubu birleştir
+            return qs.filter(id__in=list(site_admin_ids) + list(daire_kullanici_ids))
+        return qs.none()
+    
+    def save_model(self, request, obj, form, change):
+        """Kullanıcı kaydedilirken site ilişkisini kontrol et"""
+        # Eğer kullanıcı bir site admini olarak oluşturuluyorsa
+        if not change and not obj.is_superuser:
+            site = self._get_user_site(request.user)
+            if site:
+                # Kullanıcıyı site admini olarak ata
+                if not Site.objects.filter(admin_user=obj).exists():
+                    site.admin_user = obj
+                    site.save()
+        super().save_model(request, obj, form, change)
 
 from django.template.loader import render_to_string
 
 # ==================== GRUP ADMIN ====================
-class CustomGroupAdmin(GroupAdmin):
+class CustomGroupAdmin(GroupAdmin, BaseSiteAdmin):  # BaseSiteAdmin EKLENDİ
     """Gelişmiş Grup Yönetimi"""
     list_display = ('name', 'user_count', 'permission_count', 'app_list')
     search_fields = ('name',)
@@ -3271,6 +3313,21 @@ class CustomGroupAdmin(GroupAdmin):
             'classes': ('wide',)
         }),
     )
+
+    def get_queryset(self, request):
+        """Sadece kullanıcının sitesine ait grupları göster"""
+        qs = super().get_queryset(request)
+        
+        if request.user.is_superuser:
+            return qs
+        
+        # Eğer gruplar site bazlı ise filtrele
+        # (Group modelinde site alanı yoksa bu filtre çalışmaz)
+        if hasattr(self.model, 'site'):
+            site = self._get_user_site(request.user)
+            if site:
+                return qs.filter(site=site)
+        return qs.none()
 
 # ÖNCE User ve Group'u kaydedin (ÖNEMLİ!)
 admin_site.register(User, CustomUserAdmin)
