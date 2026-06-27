@@ -3212,11 +3212,11 @@ class SiteAdmin(BaseSiteAdmin):
         
         return super().response_add(request, obj, post_url_continue)
     
-    class Media:
-        css = {
-            'all': ('admin/css/site_admin.css',)
-        }
-        js = ('admin/js/site_admin.js',)
+    #class Media:
+     #   css = {
+      #      'all': ('admin/css/site_admin.css',)
+        #}
+       # js = ('admin/js/site_admin.js',)
 
 # ==================== KULLANICI ADMIN (EKLENDİ) ====================
 from django.contrib.auth.admin import UserAdmin, GroupAdmin
