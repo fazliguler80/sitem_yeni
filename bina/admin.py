@@ -1688,8 +1688,7 @@ class RaporlarAdmin(admin.AdminSite):
         
         return JsonResponse({'status': 'error', 'message': 'Geçersiz istek!'})
 
-    # bina/admin.py - RaporlarAdmin sınıfı içinde get_app_list metodunu güncelleyin
-
+    
     def get_app_list(self, request, app_label=None):
         # Mevcut app_list'i al
         try:
@@ -1746,28 +1745,29 @@ class RaporlarAdmin(admin.AdminSite):
                 ]
             }
             
-            # ========== SİSTEM BÖLÜMÜ ==========
+            # ========== SİSTEM BÖLÜMÜ - URL'LER DÜZELTİLDİ ==========
             sistem_app = {
                 'name': '⚙️ SİSTEM',
                 'app_label': 'sistem',
                 'app_url': '#',
                 'models': [
-                    {
-                        'name': '📋 Günlük Kayıtları (Log)',
-                        'object_name': 'logentry',
-                        'admin_url': '/admin/admin/logentry/',
-                        'view_only': True,
-                    },
+                    # LogEntry'yi KALDIRIN (zaten Yönetim bölümünde var)
+                    #{
+                     #   'name': '📋 Günlük Kayıtları (Log)',
+                      #  'object_name': 'logentry',
+                       # 'admin_url': '/admin/admin/logentry/',  # ✅ DOĞRU
+                        #'view_only': True,
+                    #},
                     {
                         'name': '📦 İçerik Türleri',
                         'object_name': 'contenttype',
-                        'admin_url': '/admin/bina/contenttype/',  # 🔧 DÜZELTİLDİ
+                        'admin_url': '/admin/contenttypes/contenttype/',  # 🔧 DÜZELTİLDİ
                         'view_only': True,
                     },
                     {
                         'name': '🔐 Oturumlar',
                         'object_name': 'session',
-                        'admin_url': '/admin/bina/session/',  # 🔧 DÜZELTİLDİ
+                        'admin_url': '/admin/sessions/session/',  # 🔧 DÜZELTİLDİ
                         'view_only': True,
                     },
                     {
