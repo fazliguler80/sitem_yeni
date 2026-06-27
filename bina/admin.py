@@ -40,7 +40,7 @@ from .models import (
     SiteAyarlari, Blok, Daire, Kisi, DaireIliskisi, 
     Aidat, Gider, Yonetici, Personel, Abonelik, 
     Firma, Banka, BankaHareket, Depozito, DepozitoHareket,
-    Fatura, DaireKullanici, AsgariUcret, MaasBordrosu, Site
+    Fatura, DaireKullanici, AsgariUcret, MaasBordrosu, Site,
 )
 
 # bina/admin.py - EN ÜSTE EKLEYİN (import'lardan sonra)
