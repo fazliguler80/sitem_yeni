@@ -1691,6 +1691,8 @@ class RaporlarAdmin(admin.AdminSite):
     
     # bina/admin.py - RaporlarAdmin sınıfı içinde get_app_list metodunu güncelleyin
 
+    # bina/admin.py - RaporlarAdmin sınıfı içinde get_app_list metodunu güncelleyin
+
     def get_app_list(self, request, app_label=None):
         # Mevcut app_list'i al
         try:
@@ -1787,17 +1789,14 @@ class RaporlarAdmin(admin.AdminSite):
                 ]
             }
             
-            # ========== AUTH BÖLÜMÜNDEN LOGENTRY'Yİ KALDIR ==========
-            # Mevcut app_list'te auth/admin bölümünü bul ve LogEntry'yi gizle
+            # ========== TÜM BÖLÜMLERDEN SİSTEM MODELLERİNİ KALDIR ==========
+            # Hangi app_label'lerden sistem modellerini kaldıracağımızı belirleyelim
+            sistem_modelleri = ['logentry', 'contenttype', 'session']
+            
             for app in app_list:
-                if app['app_label'] in ['admin', 'auth']:
-                    # LogEntry'yi kaldır
-                    app['models'] = [m for m in app['models'] if m['object_name'] != 'logentry']
-                    # ContentType'ı kaldır (zaten sistemde var)
-                    app['models'] = [m for m in app['models'] if m['object_name'] != 'contenttype']
-                    # Session'ı kaldır (zaten sistemde var)
-                    app['models'] = [m for m in app['models'] if m['object_name'] != 'session']
-                    break
+                # 'admin', 'auth', 'contenttypes', 'sessions' bölümlerinden sistem modellerini kaldır
+                if app['app_label'] in ['admin', 'auth', 'contenttypes', 'sessions']:
+                    app['models'] = [m for m in app['models'] if m['object_name'] not in sistem_modelleri]
             
             # Raporlar bölümünü en başa ekle
             app_list.insert(0, rapor_app)
