@@ -3226,7 +3226,7 @@ from django.contrib.contenttypes.models import ContentType
 # ==================== KULLANICI ADMIN ====================
 # bina/admin.py - CustomUserAdmin sınıfını güncelleyin
 
-class CustomUserAdmin(UserAdmin, BaseSiteAdmin):  # BaseSiteAdmin EKLENDİ
+class CustomUserAdmin(UserAdmin, BaseSiteAdmin):
     """Kullanıcı yönetimi için özel admin"""
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'is_active', 'date_joined')
     list_filter = ('is_staff', 'is_active', 'is_superuser', 'groups')
@@ -3245,7 +3245,27 @@ class CustomUserAdmin(UserAdmin, BaseSiteAdmin):  # BaseSiteAdmin EKLENDİ
     actions = ['toplu_grup_ata']
     
     def toplu_grup_ata(self, request, queryset):
-        # ... mevcut kod ...
+        """Seçili kullanıcıları bir gruba ata"""
+        from django.shortcuts import render
+        from django.http import HttpResponseRedirect
+        
+        if request.method == 'POST':
+            group_id = request.POST.get('group')
+            if group_id:
+                group = Group.objects.get(id=group_id)
+                count = 0
+                for user in queryset:
+                    user.groups.add(group)
+                    count += 1
+                self.message_user(request, f'✅ {count} kullanıcı "{group.name}" grubuna eklendi.')
+                return HttpResponseRedirect(request.path_info)
+        
+        groups = Group.objects.all()
+        return render(request, 'admin/toplu_grup_ata.html', {
+            'queryset': queryset,
+            'groups': groups,
+            'title': 'Toplu Grup Ata'
+        })
     
     def get_queryset(self, request):
         """Sadece kullanıcının sitesine ait kullanıcıları göster"""
@@ -3254,26 +3274,20 @@ class CustomUserAdmin(UserAdmin, BaseSiteAdmin):  # BaseSiteAdmin EKLENDİ
         if request.user.is_superuser:
             return qs
         
-        # Kullanıcının sitesini bul
         site = self._get_user_site(request.user)
         if site:
-            # Site admini olan kullanıcılar
             site_admin_ids = Site.objects.filter(id=site.id).values_list('admin_user_id', flat=True)
-            # Daire kullanıcıları (daire üzerinden siteye bağlı)
             daire_kullanici_ids = DaireKullanici.objects.filter(
                 daire__site=site
             ).values_list('kullanici_id', flat=True)
-            # Her iki grubu birleştir
             return qs.filter(id__in=list(site_admin_ids) + list(daire_kullanici_ids))
         return qs.none()
     
     def save_model(self, request, obj, form, change):
         """Kullanıcı kaydedilirken site ilişkisini kontrol et"""
-        # Eğer kullanıcı bir site admini olarak oluşturuluyorsa
         if not change and not obj.is_superuser:
             site = self._get_user_site(request.user)
             if site:
-                # Kullanıcıyı site admini olarak ata
                 if not Site.objects.filter(admin_user=obj).exists():
                     site.admin_user = obj
                     site.save()
@@ -3282,7 +3296,7 @@ class CustomUserAdmin(UserAdmin, BaseSiteAdmin):  # BaseSiteAdmin EKLENDİ
 from django.template.loader import render_to_string
 
 # ==================== GRUP ADMIN ====================
-class CustomGroupAdmin(GroupAdmin, BaseSiteAdmin):  # BaseSiteAdmin EKLENDİ
+class CustomGroupAdmin(GroupAdmin, BaseSiteAdmin):
     """Gelişmiş Grup Yönetimi"""
     list_display = ('name', 'user_count', 'permission_count', 'app_list')
     search_fields = ('name',)
@@ -3309,11 +3323,11 @@ class CustomGroupAdmin(GroupAdmin, BaseSiteAdmin):  # BaseSiteAdmin EKLENDİ
         }),
         ('Yetkiler (Permissions)', {
             'fields': ('permissions',),
-            'description': render_to_string('admin/group_description.html'),  # Dosya adı değişti!
+            'description': render_to_string('admin/group_description.html'),
             'classes': ('wide',)
         }),
     )
-
+    
     def get_queryset(self, request):
         """Sadece kullanıcının sitesine ait grupları göster"""
         qs = super().get_queryset(request)
@@ -3321,8 +3335,6 @@ class CustomGroupAdmin(GroupAdmin, BaseSiteAdmin):  # BaseSiteAdmin EKLENDİ
         if request.user.is_superuser:
             return qs
         
-        # Eğer gruplar site bazlı ise filtrele
-        # (Group modelinde site alanı yoksa bu filtre çalışmaz)
         if hasattr(self.model, 'site'):
             site = self._get_user_site(request.user)
             if site:
