@@ -1691,6 +1691,8 @@ class RaporlarAdmin(admin.AdminSite):
         
     # bina/admin.py - RaporlarAdmin sınıfı içinde get_app_list metodunu güncelleyin
 
+    # bina/admin.py - RaporlarAdmin sınıfı içinde get_app_list metodunu güncelleyin
+
     def get_app_list(self, request, app_label=None):
         # Mevcut app_list'i al
         try:
@@ -1787,17 +1789,17 @@ class RaporlarAdmin(admin.AdminSite):
                 ]
             }
             
-            # ========== ÇİFT KAYITLARI GİZLE (SADECE DJANGO'NUN VARSayılan BÖLÜMLERİNDEN) ==========
-            # Bu modeller sadece SİSTEM bölümünde görünsün
-            gizlenecek_modeller = ['logentry', 'contenttype', 'session']
+            # ========== TÜM ÇİFT KAYITLARI KALDIR ==========
+            # Yeni bir app_list oluştur
+            yeni_app_list = []
             
             for app in app_list:
-                # 'admin', 'auth', 'contenttypes', 'sessions' bölümlerinden gizle
-                if app['app_label'] in ['admin', 'auth', 'contenttypes', 'sessions']:
-                    app['models'] = [
-                        m for m in app['models'] 
-                        if m['object_name'] not in gizlenecek_modeller
-                    ]
+                # 'admin', 'auth', 'contenttypes', 'sessions' bölümlerini TAMAMEN KALDIR
+                if app['app_label'] not in ['admin', 'auth', 'contenttypes', 'sessions']:
+                    yeni_app_list.append(app)
+            
+            # Yeni listeyi kullan
+            app_list = yeni_app_list
             
             # Raporlar bölümünü en başa ekle
             app_list.insert(0, rapor_app)
