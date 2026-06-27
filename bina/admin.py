@@ -48,6 +48,12 @@ from django.urls import path
 from django.utils.html import format_html
 from datetime import datetime, timedelta
 
+# Admin sitesi - BURASI ÖNEMLİ
+admin_site = RaporlarAdmin(name='myadmin')
+admin_site.site_header = "SİTE YÖNETİM PANELİ"
+admin_site.site_title = "SİTE YÖNETİM PANELİ"
+admin_site.index_title = "YÖNETİM PANELİNE HOŞ GELDİNİZ"
+
 class TarihFiltresiMixin:
     """Admin liste ekranlarına hızlı tarih filtresi ekleyen mixin"""
     
@@ -1688,11 +1694,7 @@ class RaporlarAdmin(admin.AdminSite):
         
         return JsonResponse({'status': 'error', 'message': 'Geçersiz istek!'})
 
-    
-    # bina/admin.py - RaporlarAdmin sınıfı içinde get_app_list metodunu güncelleyin
-
-    # bina/admin.py - RaporlarAdmin sınıfı içinde get_app_list metodunu güncelleyin
-
+        
     def get_app_list(self, request, app_label=None):
         # Mevcut app_list'i al
         try:
@@ -2743,12 +2745,6 @@ class MaasBordrosuAdmin(admin.ModelAdmin):
         extra_context['toplam_brut_maas'] = toplam_brut
         extra_context['toplam_net_maas'] = toplam_net
         return super().changelist_view(request, extra_context=extra_context)
-
-# Admin sitesi - BURASI ÖNEMLİ
-admin_site = RaporlarAdmin(name='myadmin')
-admin_site.site_header = "SİTE YÖNETİM PANELİ"
-admin_site.site_title = "SİTE YÖNETİM PANELİ"
-admin_site.index_title = "YÖNETİM PANELİNE HOŞ GELDİNİZ"
 
 # Modelleri kaydet - SAKIN @admin.register KULLANMA!
 # Modelleri kaydet - ÖNCE AsgariUcret ve MaasBordrosu
