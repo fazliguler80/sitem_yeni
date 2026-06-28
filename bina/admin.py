@@ -256,14 +256,20 @@ class DaireIliskisiAdmin(BaseSiteAdmin):
     pasif_yap.short_description = "Seçili ilişkileri pasif yap"
 
 # ==================== SİTE AYARLARI ADMIN ====================
-class SiteAyarlariAdmin(admin.ModelAdmin):
-    list_display = ('site', 'sabit_aidat_miktari', 'sabit_aidat_aktif_mi', 'gider_yuvarlama_aktif')
+class SiteAyarlariAdmin(BaseSiteAdmin):
+    list_display = ('site_adi', 'sabit_aidat_miktari', 'sabit_aidat_aktif_mi', 'gider_yuvarlama_aktif')
     list_filter = ('sabit_aidat_aktif_mi', 'gider_yuvarlama_aktif')
-    search_fields = ('site__adi',)
+    search_fields = ('site_adi',)
     
     fieldsets = (
+        ('Site Bilgileri', {
+            'fields': ('site_adi', 'adres', 'il', 'ilce', 'posta_kodu', 'telefon', 'email', 'web_sitesi')
+        }),
+        ('Arsa Bilgileri', {
+            'fields': ('toplam_arsa_m2', 'toplam_brut_m2')
+        }),
         ('Sabit Aidat Ayarları', {
-            'fields': ('sabit_aidat_miktari', 'sabit_aidat_aktif_mi')
+            'fields': ('sabit_aidat_miktari', 'sabit_aidat_aktif_mi', 'sabit_aidat_kesim_gunu')
         }),
         ('Yuvarlama Ayarları', {
             'fields': ('gider_yuvarlama_aktif', 'gider_yuvarlama_tip', 'gider_yuvarlama_kat')
@@ -365,18 +371,17 @@ class FirmaAdmin(BaseSiteAdmin):
 # bina/admin.py - AbonelikAdmin sınıfını düzeltin
 
 class AbonelikAdmin(BaseSiteAdmin):
-    list_display = ('abone_no', 'daire_bilgisi', 'tip', 'baslangic_tarihi', 'bitis_tarihi', 'aktif_mi')
+    list_display = ('abone_no', 'firma_adi', 'tip', 'baslangic_tarihi', 'bitis_tarihi', 'aktif_mi')  # 'daire_bilgisi' kaldırıldı
     list_filter = ('tip', 'aktif_mi')
-    search_fields = ('abone_no', 'daire__blok__blok_adi', 'daire__daire_no')
+    search_fields = ('abone_no', 'firma_adi', 'abone_adi')
     list_editable = ('aktif_mi',)
-    
-    def daire_bilgisi(self, obj):
-        return str(obj.daire) if obj.daire else '-'
-    daire_bilgisi.short_description = 'Daire'
     
     fieldsets = (
         ('Temel Bilgiler', {
-            'fields': ('abone_no', 'daire', 'tip', 'aktif_mi')
+            'fields': ('abone_no', 'firma_adi', 'abone_adi', 'tip', 'aktif_mi')
+        }),
+        ('İletişim', {
+            'fields': ('telefon',)
         }),
         ('Tarih Bilgileri', {
             'fields': ('baslangic_tarihi', 'bitis_tarihi')
@@ -390,14 +395,10 @@ class AbonelikAdmin(BaseSiteAdmin):
 # bina/admin.py - FaturaAdmin sınıfını düzeltin
 
 class FaturaAdmin(BaseSiteAdmin):
-    list_display = ('tip', 'aciklama', 'tarih', 'dosya', 'olusturma_tarihi_goster')
+    list_display = ('tip', 'aciklama', 'tarih', 'dosya')  # 'olusturma_tarihi_goster' kaldırıldı
     list_filter = ('tip', 'tarih')
     search_fields = ('aciklama',)
     date_hierarchy = 'tarih'
-    
-    def olusturma_tarihi_goster(self, obj):
-        return obj.olusturma_tarihi.strftime('%d/%m/%Y %H:%M') if obj.olusturma_tarihi else '-'
-    olusturma_tarihi_goster.short_description = 'Oluşturma Tarihi'
     
     fieldsets = (
         ('Fatura Bilgileri', {
@@ -407,6 +408,7 @@ class FaturaAdmin(BaseSiteAdmin):
             'fields': ('dosya',)
         }),
     )
+
 
 class DaireAdmin(BaseSiteAdmin):
     list_display = ('blok', 'daire_no', 'kat', 'daire_tipi', 'malik_bilgisi', 
