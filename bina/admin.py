@@ -1924,10 +1924,12 @@ class RaporlarAdmin(admin.AdminSite):
             toplam_daire = Daire.objects.filter(site=site).count()
             toplam_kisi = Kisi.objects.filter(site=site).count()
             toplam_blok = Blok.objects.filter(site=site).count()
-            bankalar = Banka.objects.all()  # Banka'da site alanı yok, tüm bankalar
+            # Banka modelinde site alanı var, filtrele
+            bankalar = Banka.objects.filter(site=site).only('id', 'banka_adi', 'guncel_bakiye')
             odenmemis_aidat = Aidat.objects.filter(site=site, odeme_yapildi_mi=False).aggregate(Sum('tutar'))['tutar__sum'] or 0
-            yillik_gelir = BankaHareket.objects.filter(tarih__year=bu_yil, hareket_tipi='gelir').aggregate(Sum('tutar'))['tutar__sum'] or 0
-            yillik_gider = BankaHareket.objects.filter(tarih__year=bu_yil, hareket_tipi='gider').aggregate(Sum('tutar'))['tutar__sum'] or 0
+            # BankaHareket üzerinden site filtresi (banka__site)
+            yillik_gelir = BankaHareket.objects.filter(banka__site=site, tarih__year=bu_yil, hareket_tipi='gelir').aggregate(Sum('tutar'))['tutar__sum'] or 0
+            yillik_gider = BankaHareket.objects.filter(banka__site=site, tarih__year=bu_yil, hareket_tipi='gider').aggregate(Sum('tutar'))['tutar__sum'] or 0
             depozitolar = Depozito.objects.filter(site=site, durum='alindi').aggregate(Sum('tutar'))['tutar__sum'] or 0
         else:
             # Superuser veya site yok - tüm veriler
