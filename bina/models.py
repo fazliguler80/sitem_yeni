@@ -1037,7 +1037,13 @@ class GiderTaksit(models.Model):
 
 # ==================== SİTE TEMEL BİLGİLERİ ====================
 class SiteAyarlari(models.Model):
-    site = models.ForeignKey(Site, on_delete=models.CASCADE, null=True, blank=True)
+    site = models.ForeignKey(
+        'Site', 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True, 
+        verbose_name="Site"
+    )
     """Sitenin temel sabit bilgileri (sadece 1 kayıt)"""
     #site = models.OneToOneField(Site, on_delete=models.CASCADE, verbose_name="Site", null=True, blank=True)
     site_adi = models.CharField(max_length=200, verbose_name="Site Adı")
@@ -1126,7 +1132,13 @@ class Yonetici(models.Model):
 
 # ==================== ABONELİKLER ====================
 class Abonelik(models.Model):
-    site = models.ForeignKey(Site, on_delete=models.CASCADE, null=True, blank=True)
+    site = models.ForeignKey(
+        'Site', 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True, 
+        verbose_name="Site"
+    )
     ABONELIK_TIPI = [
         ('elektrik', 'Elektrik'),
         ('su', 'Su'),
@@ -1441,7 +1453,13 @@ def depozito_banka_hareketi(sender, instance, created, **kwargs):
             )
 
 class Fatura(models.Model):
-    site = models.ForeignKey(Site, on_delete=models.CASCADE, null=True, blank=True)
+    site = models.ForeignKey(
+        'Site', 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True, 
+        verbose_name="Site"
+    )
     """Fatura/dekont dosyaları"""
     FATURA_TIPI = [
         ('elektrik', 'Elektrik'),
