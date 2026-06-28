@@ -255,6 +255,24 @@ class DaireIliskisiAdmin(BaseSiteAdmin):
         self.message_user(request, f"{queryset.count()} ilişki pasif yapıldı.")
     pasif_yap.short_description = "Seçili ilişkileri pasif yap"
 
+# ==================== SİTE AYARLARI ADMIN ====================
+class SiteAyarlariAdmin(BaseSiteAdmin):
+    list_display = ('site', 'sabit_aidat_miktari', 'sabit_aidat_aktif_mi', 'gider_yuvarlama_aktif')
+    list_filter = ('sabit_aidat_aktif_mi', 'gider_yuvarlama_aktif')
+    search_fields = ('site__adi',)
+    
+    fieldsets = (
+        ('Sabit Aidat Ayarları', {
+            'fields': ('sabit_aidat_miktari', 'sabit_aidat_aktif_mi')
+        }),
+        ('Yuvarlama Ayarları', {
+            'fields': ('gider_yuvarlama_aktif', 'gider_yuvarlama_tip', 'gider_yuvarlama_kat')
+        }),
+        ('Depozito Ayarları', {
+            'fields': ('depozito_ekle',)
+        }),
+    )
+
 class YoneticiAdmin(BaseSiteAdmin):
     list_display = ('ad_soyad', 'gorev_tipi', 'telefon', 'email', 'gorev_baslangic', 'aktif_mi')
     list_filter = ('gorev_tipi', 'aktif_mi')
@@ -340,6 +358,41 @@ class FirmaAdmin(BaseSiteAdmin):
     list_display = ('firma_adi', 'tip', 'yetkili_kisi', 'telefon', 'sozlesme_bitis', 'aktif_mi')
     list_filter = ('tip', 'aktif_mi')
     search_fields = ('firma_adi', 'yetkili_kisi')
+
+
+class AbonelikAdmin(BaseSiteAdmin):
+    list_display = ('abone_no', 'daire', 'tip', 'baslangic_tarihi', 'bitis_tarihi', 'aktif_mi')
+    list_filter = ('tip', 'aktif_mi')
+    search_fields = ('abone_no', 'daire__blok__blok_adi', 'daire__daire_no')
+    list_editable = ('aktif_mi',)
+    
+    fieldsets = (
+        ('Temel Bilgiler', {
+            'fields': ('abone_no', 'daire', 'tip', 'aktif_mi')
+        }),
+        ('Tarih Bilgileri', {
+            'fields': ('baslangic_tarihi', 'bitis_tarihi')
+        }),
+        ('Açıklama', {
+            'fields': ('aciklama',)
+        }),
+    )
+
+
+class FaturaAdmin(BaseSiteAdmin):
+    list_display = ('tip', 'aciklama', 'tarih', 'dosya', 'olusturma_tarihi')
+    list_filter = ('tip', 'tarih')
+    search_fields = ('aciklama',)
+    date_hierarchy = 'tarih'
+    
+    fieldsets = (
+        ('Fatura Bilgileri', {
+            'fields': ('tip', 'aciklama', 'tarih')
+        }),
+        ('Dosya Bilgileri', {
+            'fields': ('dosya',)
+        }),
+    )
 
 class DaireAdmin(BaseSiteAdmin):
     list_display = ('blok', 'daire_no', 'kat', 'daire_tipi', 'malik_bilgisi', 
@@ -475,12 +528,6 @@ import json
 
 from .models import Aidat, Kisi
 
-# bina/admin.py - BASİT AİDAT ADMIN (geçici çözüm)
-
-# bina/admin.py
-
-
-# bina/admin.py - AidatAdmin sınıfı
 
 class OdemeDurumuFilter(SimpleListFilter):
     title = 'Ödeme Durumu'
@@ -3336,8 +3383,8 @@ admin_site.register(User, CustomUserAdmin)
 admin_site.register(Group, CustomGroupAdmin)
 
 # Diğer modeller
-admin_site.register(SiteAyarlari)
 admin_site.register(Site, SiteAdmin)
+admin_site.register(SiteAyarlari, SiteAyarlariAdmin)
 admin_site.register(Blok)
 admin_site.register(Daire, DaireAdmin)
 admin_site.register(Kisi, KisiAdmin)
@@ -3345,12 +3392,12 @@ admin_site.register(DaireIliskisi, DaireIliskisiAdmin)
 admin_site.register(Aidat, AidatAdmin)
 admin_site.register(Gider, GiderAdmin)
 admin_site.register(Yonetici, YoneticiAdmin)
-admin_site.register(Abonelik)
+admin_site.register(Abonelik, AbonelikAdmin)
 admin_site.register(Firma, FirmaAdmin)
 admin_site.register(Banka, BankaAdmin)
 admin_site.register(Depozito, DepozitoAdmin)
 admin_site.register(DepozitoHareket, DepozitoHareketAdmin)
-admin_site.register(Fatura)
+admin_site.register(Fatura, FaturaAdmin)
 admin_site.register(BankaHareket, BankaHareketAdmin)
 admin_site.register(LogEntry, LogEntryAdmin)
 admin_site.register(ContentType, CustomContentTypeAdmin)
