@@ -867,6 +867,39 @@ class AidatAdmin(TarihFiltresiMixin, BaseSiteAdmin):
 
 class RaporlarAdmin(admin.AdminSite):
 
+    def _get_user_site(self, user):
+        """Kullanıcının bağlı olduğu siteyi bul"""
+        from .models import Site, DaireKullanici
+        
+        try:
+            # 1. Site admini mi?
+            site = Site.objects.filter(admin_user=user, aktif=True).first()
+            if site:
+                return site
+            
+            # 2. Daire kullanıcısı mı?
+            daire_kullanici = DaireKullanici.objects.filter(kullanici=user).first()
+            if daire_kullanici and daire_kullanici.daire:
+                return daire_kullanici.daire.site
+        except:
+            pass
+        
+        # 3. Session'dan site bilgisi
+        try:
+            import sys
+            for frame in sys._current_frames().values():
+                if 'request' in frame.f_locals:
+                    request = frame.f_locals['request']
+                    if hasattr(request, 'session'):
+                        site_id = request.session.get('aktif_site_id') or request.session.get('portal_site_id')
+                        if site_id:
+                            site = Site.objects.filter(id=site_id, aktif=True).first()
+                            if site:
+                                return site
+        except:
+            pass
+        
+        return None
      
     @property
     def site_header(self):
@@ -1328,6 +1361,9 @@ class RaporlarAdmin(admin.AdminSite):
             baslangic = None
             bitis = None
         
+        # Kullanıcının sitesini bul
+        site = self._get_user_site(request.user)
+        
         # ========== 1. GİDERLER ==========
         if baslangic and bitis:
             giderler = Gider.objects.filter(tarih__range=[baslangic, bitis])
@@ -1338,6 +1374,10 @@ class RaporlarAdmin(admin.AdminSite):
         else:
             giderler = Gider.objects.filter(tarih__year=yil)
             donem = f"{yil} Yılı"
+        
+        # ========== SİTE FİLTRESİ ==========
+        if site and not request.user.is_superuser:
+            giderler = giderler.filter(site=site)
         
         toplam_gider = giderler.aggregate(Sum('tutar'))['tutar__sum'] or 0
         gider_kategorileri = giderler.values('tip').annotate(toplam=Sum('tutar'))
@@ -1350,12 +1390,18 @@ class RaporlarAdmin(admin.AdminSite):
         else:
             aidatlar = Aidat.objects.filter(yil=yil, odeme_yapildi_mi=True)
         
+        # ========== SİTE FİLTRESİ ==========
+        if site and not request.user.is_superuser:
+            aidatlar = aidatlar.filter(site=site)
+        
         toplam_aidat_geliri = aidatlar.aggregate(Sum('tutar'))['tutar__sum'] or 0
         
         # ========== 3. DEPOZİTO GELİRLERİ ==========
-        # 3a. Başlangıç depozitoları - TÜM DEPOZİTO KAYITLARI (tarih filtresi OLMADAN)
         depozito_alinan = Depozito.objects.aggregate(Sum('tutar'))['tutar__sum'] or 0
-        depozito_sayisi = Depozito.objects.count()
+        
+        # ========== SİTE FİLTRESİ ==========
+        if site and not request.user.is_superuser:
+            depozito_alinan = Depozito.objects.filter(site=site).aggregate(Sum('tutar'))['tutar__sum'] or 0
         
         # DEBUG - Konsola yazdır
         print(f"\n=== DEPOZITO DEBUG ===")
@@ -1575,6 +1621,9 @@ class RaporlarAdmin(admin.AdminSite):
             baslangic = None
             bitis = None
         
+        # Kullanıcının sitesini bul
+        site = self._get_user_site(request.user)
+        
         # Tarih aralığına göre filtreleme
         if baslangic and bitis:
             hareketler = BankaHareket.objects.filter(tarih__range=[baslangic, bitis])
@@ -1591,6 +1640,10 @@ class RaporlarAdmin(admin.AdminSite):
             if banka_id:
                 hareketler = hareketler.filter(banka_id=banka_id)
             donem = f"{yil} Yılı"
+        
+        # ========== SİTE FİLTRESİ ==========
+        if site and not request.user.is_superuser:
+            hareketler = hareketler.filter(banka__site=site)
         
         toplam_gelir = hareketler.filter(hareket_tipi='gelir').aggregate(Sum('tutar'))['tutar__sum'] or 0
         toplam_gider = hareketler.filter(hareket_tipi='gider').aggregate(Sum('tutar'))['tutar__sum'] or 0
@@ -1674,6 +1727,9 @@ class RaporlarAdmin(admin.AdminSite):
             baslangic = None
             bitis = None
         
+        # Kullanıcının sitesini bul
+        site = self._get_user_site(request.user)
+        
         # Tarih aralığına göre filtreleme
         if baslangic and bitis:
             aidatlar = Aidat.objects.filter(odeme_tarihi__range=[baslangic, bitis])
@@ -1684,6 +1740,10 @@ class RaporlarAdmin(admin.AdminSite):
         else:
             aidatlar = Aidat.objects.filter(yil=yil)
             donem = f"{yil} Yılı"
+        
+        # ========== SİTE FİLTRESİ ==========
+        if site and not request.user.is_superuser:
+            aidatlar = aidatlar.filter(site=site)
         
         # ========== YENİ EKLENEN FİLTRELER ==========
         if blok_id:
@@ -1793,8 +1853,16 @@ class RaporlarAdmin(admin.AdminSite):
             except:
                 ay = None
         
+        # Kullanıcının sitesini bul
+        site = self._get_user_site(request.user)
+        
         # Bordroları filtrele
         bordrolar = MaasBordrosu.objects.all()
+        
+        # ========== SİTE FİLTRESİ ==========
+        if site and not request.user.is_superuser:
+            bordrolar = bordrolar.filter(personel__site=site)
+        
         if ay:
             bordrolar = bordrolar.filter(yil=yil, ay=ay)
             donem = f"{month_name[ay]} {yil}"
@@ -1849,25 +1917,47 @@ class RaporlarAdmin(admin.AdminSite):
         return render(request, 'admin/maas_bordrosu_raporu.html', context)
 
     def genel_durum_raporu(self, request):
-        toplam_daire = Daire.objects.count()
-        toplam_kisi = Kisi.objects.count()
-        toplam_blok = Blok.objects.count()
-        bankalar = Banka.objects.all()
+        # Kullanıcının sitesini bul
+        site = self._get_user_site(request.user)
+        
+        # ========== SİTE FİLTRESİ ==========
+        if site and not request.user.is_superuser:
+            toplam_daire = Daire.objects.filter(site=site).count()
+            toplam_kisi = Kisi.objects.filter(site=site).count()
+            toplam_blok = Blok.objects.filter(site=site).count()
+            bankalar = Banka.objects.filter(site=site)
+            odenmemis_aidat = Aidat.objects.filter(site=site, odeme_yapildi_mi=False).aggregate(Sum('tutar'))['tutar__sum'] or 0
+            bu_yil = datetime.now().year
+            yillik_gelir = BankaHareket.objects.filter(banka__site=site, tarih__year=bu_yil, hareket_tipi='gelir').aggregate(Sum('tutar'))['tutar__sum'] or 0
+            yillik_gider = BankaHareket.objects.filter(banka__site=site, tarih__year=bu_yil, hareket_tipi='gider').aggregate(Sum('tutar'))['tutar__sum'] or 0
+            depozitolar = Depozito.objects.filter(site=site, durum='alindi').aggregate(Sum('tutar'))['tutar__sum'] or 0
+        else:
+            # Superuser veya site bulunamadıysa tüm veriler
+            toplam_daire = Daire.objects.count()
+            toplam_kisi = Kisi.objects.count()
+            toplam_blok = Blok.objects.count()
+            bankalar = Banka.objects.all()
+            odenmemis_aidat = Aidat.objects.filter(odeme_yapildi_mi=False).aggregate(Sum('tutar'))['tutar__sum'] or 0
+            bu_yil = datetime.now().year
+            yillik_gelir = BankaHareket.objects.filter(tarih__year=bu_yil, hareket_tipi='gelir').aggregate(Sum('tutar'))['tutar__sum'] or 0
+            yillik_gider = BankaHareket.objects.filter(tarih__year=bu_yil, hareket_tipi='gider').aggregate(Sum('tutar'))['tutar__sum'] or 0
+            depozitolar = Depozito.objects.filter(durum='alindi').aggregate(Sum('tutar'))['tutar__sum'] or 0
+        
         toplam_bakiye = sum([float(b.guncel_bakiye) for b in bankalar])
-        odenmemis_aidat = Aidat.objects.filter(odeme_yapildi_mi=False).aggregate(Sum('tutar'))['tutar__sum'] or 0
-        bu_yil = datetime.now().year
-        yillik_gelir = BankaHareket.objects.filter(tarih__year=bu_yil, hareket_tipi='gelir').aggregate(Sum('tutar'))['tutar__sum'] or 0
-        yillik_gider = BankaHareket.objects.filter(tarih__year=bu_yil, hareket_tipi='gider').aggregate(Sum('tutar'))['tutar__sum'] or 0
-        depozitolar = Depozito.objects.filter(durum='alindi').aggregate(Sum('tutar'))['tutar__sum'] or 0
         
         context = {
             'title': 'Genel Durum Raporu',
             'site_header': self.site_header,
-            'toplam_daire': toplam_daire, 'toplam_kisi': toplam_kisi,
-            'toplam_blok': toplam_blok, 'toplam_bakiye': toplam_bakiye,
-            'odenmemis_aidat': odenmemis_aidat, 'yillik_gelir': yillik_gelir,
-            'yillik_gider': yillik_gider, 'yillik_net': yillik_gelir - yillik_gider,
-            'depozitolar': depozitolar, 'bankalar': bankalar,
+            'toplam_daire': toplam_daire,
+            'toplam_kisi': toplam_kisi,
+            'toplam_blok': toplam_blok,
+            'toplam_bakiye': toplam_bakiye,
+            'odenmemis_aidat': odenmemis_aidat,
+            'yillik_gelir': yillik_gelir,
+            'yillik_gider': yillik_gider,
+            'yillik_net': yillik_gelir - yillik_gider,
+            'depozitolar': depozitolar,
+            'bankalar': bankalar,
         }
         return render(request, 'admin/genel_durum_raporu.html', context)
     
