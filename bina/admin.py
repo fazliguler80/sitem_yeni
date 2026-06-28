@@ -1723,6 +1723,7 @@ class RaporlarAdmin(admin.AdminSite):
         
         # Kullanıcının sitesini bul
         site = self._get_user_site(request.user)
+        print(f"🔍 banka_hareketleri_raporu - site: {site}")
         
         # ========== Tarih aralığına göre filtreleme ==========
         if baslangic and bitis:
@@ -1741,14 +1742,17 @@ class RaporlarAdmin(admin.AdminSite):
                 hareketler = hareketler.filter(banka__id=int(banka_id))
             donem = f"{yil} Yılı"
         
-        # ========== SİTE FİLTRESİ ==========
-        # try-except ile korundu - site_id sütunu yoksa hata vermesin
+        # ========== SİTE FİLTRESİ (try-except ile korunmuş) ==========
         if site and not request.user.is_superuser:
             try:
                 hareketler = hareketler.filter(banka__site=site)
+                print(f"✅ Banka hareketleri site filtrelendi: {hareketler.count()} kayıt")
             except Exception as e:
-                print(f"⚠️ Banka hareketleri site filtresi hatası: {e}")
-                # Hata durumunda filtreleme yapma
+                print(f"⚠️ Banka hareketleri filtresi hatası: {e}")
+                # Hata durumunda filtreleme yapma - devam et
+                pass
+        else:
+            print(f"🔍 Site filtresi UYGULANMADI! site={site}, is_superuser={request.user.is_superuser}")
         
         toplam_gelir = hareketler.filter(hareket_tipi='gelir').aggregate(Sum('tutar'))['tutar__sum'] or 0
         toplam_gider = hareketler.filter(hareket_tipi='gider').aggregate(Sum('tutar'))['tutar__sum'] or 0
@@ -1757,8 +1761,9 @@ class RaporlarAdmin(admin.AdminSite):
         if site and not request.user.is_superuser:
             try:
                 bankalar = Banka.objects.filter(site=site).only('id', 'banka_adi')
+                print(f"✅ Bankalar site filtrelendi: {bankalar.count()} kayıt")
             except Exception as e:
-                print(f"⚠️ Bankalar site filtresi hatası: {e}")
+                print(f"⚠️ Bankalar filtresi hatası: {e}")
                 bankalar = Banka.objects.only('id', 'banka_adi')
         else:
             bankalar = Banka.objects.only('id', 'banka_adi')
