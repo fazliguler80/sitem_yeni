@@ -1740,10 +1740,19 @@ class RaporlarAdmin(admin.AdminSite):
             if banka_id and str(banka_id).isdigit():
                 hareketler = hareketler.filter(banka__id=int(banka_id))
             donem = f"{yil} Yılı"
-                       
+        
+        # ========== SİTE FİLTRESİ ==========
+        if site and not request.user.is_superuser:
+            hareketler = hareketler.filter(banka__site=site)
+        
         toplam_gelir = hareketler.filter(hareket_tipi='gelir').aggregate(Sum('tutar'))['tutar__sum'] or 0
         toplam_gider = hareketler.filter(hareket_tipi='gider').aggregate(Sum('tutar'))['tutar__sum'] or 0
-        bankalar = Banka.objects.only('id', 'banka_adi')
+        
+        # ========== SİTE FİLTRESİ - bankalar ==========
+        if site and not request.user.is_superuser:
+            bankalar = Banka.objects.filter(site=site).only('id', 'banka_adi')
+        else:
+            bankalar = Banka.objects.only('id', 'banka_adi')
         
         # Aylar için Türkçe isimler
         aylar = {1: 'Ocak', 2: 'Şubat', 3: 'Mart', 4: 'Nisan', 5: 'Mayıs', 6: 'Haziran',
@@ -2018,33 +2027,22 @@ class RaporlarAdmin(admin.AdminSite):
         site = self._get_user_site(request.user)
         bu_yil = datetime.now().year
         
-        # DEBUG - site değerini yazdır
-        print(f"DEBUG - Site: {site}")
-        
         if site and not request.user.is_superuser:
-            print(f"DEBUG - Site filtresi uygulanıyor: {site}")
+            # Site bazlı filtreleme
             toplam_daire = Daire.objects.filter(site=site).count()
             toplam_kisi = Kisi.objects.filter(site=site).count()
             toplam_blok = Blok.objects.filter(site=site).count()
-            
-            # Banka sorgusunu kontrol et
-            try:
-                bankalar = Banka.objects.filter(site=site).only('id', 'banka_adi', 'guncel_bakiye')
-                print(f"DEBUG - Banka sayısı: {bankalar.count()}")
-            except Exception as e:
-                print(f"DEBUG - Banka hatası: {e}")
-                bankalar = Banka.objects.only('id', 'banka_adi', 'guncel_bakiye')
-            
+            bankalar = Banka.objects.filter(site=site).only('id', 'banka_adi', 'guncel_bakiye', 'hesap_adi', 'hesap_tipi', 'iban')
             odenmemis_aidat = Aidat.objects.filter(site=site, odeme_yapildi_mi=False).aggregate(Sum('tutar'))['tutar__sum'] or 0
-            yillik_gelir = BankaHareket.objects.filter(tarih__year=bu_yil, hareket_tipi='gelir').aggregate(Sum('tutar'))['tutar__sum'] or 0
-            yillik_gider = BankaHareket.objects.filter(tarih__year=bu_yil, hareket_tipi='gider').aggregate(Sum('tutar'))['tutar__sum'] or 0
+            yillik_gelir = BankaHareket.objects.filter(banka__site=site, tarih__year=bu_yil, hareket_tipi='gelir').aggregate(Sum('tutar'))['tutar__sum'] or 0
+            yillik_gider = BankaHareket.objects.filter(banka__site=site, tarih__year=bu_yil, hareket_tipi='gider').aggregate(Sum('tutar'))['tutar__sum'] or 0
             depozitolar = Depozito.objects.filter(site=site, durum='alindi').aggregate(Sum('tutar'))['tutar__sum'] or 0
         else:
-            print(f"DEBUG - Site filtresi yok, tüm veriler")
+            # Superuser veya site yok - tüm veriler
             toplam_daire = Daire.objects.count()
             toplam_kisi = Kisi.objects.count()
             toplam_blok = Blok.objects.count()
-            bankalar = Banka.objects.only('id', 'banka_adi', 'guncel_bakiye')
+            bankalar = Banka.objects.only('id', 'banka_adi', 'guncel_bakiye', 'hesap_adi', 'hesap_tipi', 'iban')
             odenmemis_aidat = Aidat.objects.filter(odeme_yapildi_mi=False).aggregate(Sum('tutar'))['tutar__sum'] or 0
             yillik_gelir = BankaHareket.objects.filter(tarih__year=bu_yil, hareket_tipi='gelir').aggregate(Sum('tutar'))['tutar__sum'] or 0
             yillik_gider = BankaHareket.objects.filter(tarih__year=bu_yil, hareket_tipi='gider').aggregate(Sum('tutar'))['tutar__sum'] or 0
@@ -2063,6 +2061,7 @@ class RaporlarAdmin(admin.AdminSite):
             'yillik_gelir': yillik_gelir,
             'yillik_gider': yillik_gider,
             'yillik_net': yillik_gelir - yillik_gider,
+            'yillik': bu_yil,
             'depozitolar': depozitolar,
             'bankalar': bankalar,
         }
