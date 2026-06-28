@@ -1474,7 +1474,13 @@ class Fatura(models.Model):
 # ==================== PERSONEL / MAAŞ MODÜLÜ ====================
 
 class Personel(models.Model):
-    site = models.ForeignKey(Site, on_delete=models.CASCADE, null=True, blank=True)
+    site = models.ForeignKey(
+        'Site', 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True, 
+        verbose_name="Site"
+    )
     """Personel bilgileri"""
     CALISMA_SEKLI = [
         ('tam_zamanli', 'Tam Zamanlı'),
