@@ -82,7 +82,13 @@ class Site(models.Model):
         verbose_name_plural = "Siteler"
 
 class Blok(models.Model):
-    site = models.ForeignKey(Site, on_delete=models.CASCADE, verbose_name="Site", null=True, blank=True)
+    site = models.ForeignKey(
+        'Site', 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True, 
+        verbose_name="Site"
+    )
     BLOK_LAR = [...]
     blok_adi = models.CharField(max_length=1, choices=BLOK_LAR, unique=True, verbose_name="Blok Adı")
 

@@ -409,6 +409,25 @@ class FaturaAdmin(BaseSiteAdmin):
         }),
     )
 
+class BlokAdmin(BaseSiteAdmin):
+    list_display = ('site', 'get_blok_adi_display', 'kat_sayisi', 'daire_sayisi')
+    list_filter = ('site',)
+    search_fields = ('blok_adi',)
+    list_editable = ('kat_sayisi', 'daire_sayisi')
+    
+    fieldsets = (
+        ('Temel Bilgiler', {
+            'fields': ('site', 'blok_adi')
+        }),
+        ('Yapı Bilgileri', {
+            'fields': ('kat_sayisi', 'daire_sayisi')
+        }),
+    )
+    
+    def get_blok_adi_display(self, obj):
+        return obj.get_blok_adi_display()
+    get_blok_adi_display.short_description = 'Blok Adı'
+    get_blok_adi_display.admin_order_field = 'blok_adi'
 
 class DaireAdmin(BaseSiteAdmin):
     list_display = ('blok', 'daire_no', 'kat', 'daire_tipi', 'malik_bilgisi', 
@@ -3401,7 +3420,7 @@ admin_site.register(SiteAyarlari, SiteAyarlariAdmin)
 admin_site.register(Personel, PersonelAdmin)
 admin_site.register(AsgariUcret, AsgariUcretAdmin)
 admin_site.register(MaasBordrosu, MaasBordrosuAdmin)
-admin_site.register(Blok)
+admin_site.register(Blok, BlokAdmin)
 admin_site.register(Daire, DaireAdmin)
 admin_site.register(Kisi, KisiAdmin)
 admin_site.register(DaireIliskisi, DaireIliskisiAdmin)
