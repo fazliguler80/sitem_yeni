@@ -53,7 +53,9 @@
             <select name="banka" style="padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
                 <option value="">Tüm Hesaplar</option>
                 {% for b in bankalar %}
-                <option value="{{ b.id }}" {% if banka_id == b.id %}selected{% endif %}>{{ b }}</option>
+                <option value="{{ b.id }}" {% if banka_id == b.id %}selected{% endif %}>
+                    {{ b.banka_adi|default:"-" }}
+                </option>
                 {% endfor %}
             </select>
             <button type="submit" style="background: #17a2b8; color: white; border: none; padding: 6px 20px; border-radius: 4px; cursor: pointer;">🔍 Filtrele</button>
@@ -80,7 +82,7 @@
             {% for h in hareketler %}
             <tr>
                 <td style="padding: 8px; border: 1px solid #ddd;">{{ h.tarih }}</td>
-                <td style="padding: 8px; border: 1px solid #ddd;">{{ h.banka }}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">{{ h.banka_id|default:"-" }}</td>
                 <td style="padding: 8px; border: 1px solid #ddd; color: {% if h.hareket_tipi == 'gelir' %}green{% else %}red{% endif %};">
                     {{ h.get_hareket_tipi_display }}
                 </td>
