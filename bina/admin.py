@@ -193,7 +193,7 @@ class BaseSiteAdmin(admin.ModelAdmin):
     
 
 
-    
+
         def _get_user_site(self, user):
             """Kullanıcının bağlı olduğu siteyi bul - ADMIN LİSTELERİ İÇİN"""
             from .models import Site, DaireKullanici
@@ -897,7 +897,8 @@ class AidatAdmin(TarihFiltresiMixin, BaseSiteAdmin):
 
 class RaporlarAdmin(admin.AdminSite):
 
-    class RaporlarAdmin(admin.AdminSite):
+    
+    
     
     def _get_user_site(self, user):
         """Kullanıcının bağlı olduğu siteyi bul - RAPORLAR İÇİN"""
