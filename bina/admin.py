@@ -1919,20 +1919,29 @@ class RaporlarAdmin(admin.AdminSite):
         site = self._get_user_site(request.user)
         bu_yil = datetime.now().year
         
+        # DEBUG - site değerini yazdır
+        print(f"DEBUG - Site: {site}")
+        
         if site and not request.user.is_superuser:
-            # Site bazlı filtreleme
+            print(f"DEBUG - Site filtresi uygulanıyor: {site}")
             toplam_daire = Daire.objects.filter(site=site).count()
             toplam_kisi = Kisi.objects.filter(site=site).count()
             toplam_blok = Blok.objects.filter(site=site).count()
-            # Banka modelinde site alanı var, filtrele
-            bankalar = Banka.objects.filter(site=site).only('id', 'banka_adi', 'guncel_bakiye')
+            
+            # Banka sorgusunu kontrol et
+            try:
+                bankalar = Banka.objects.filter(site=site).only('id', 'banka_adi', 'guncel_bakiye')
+                print(f"DEBUG - Banka sayısı: {bankalar.count()}")
+            except Exception as e:
+                print(f"DEBUG - Banka hatası: {e}")
+                bankalar = Banka.objects.only('id', 'banka_adi', 'guncel_bakiye')
+            
             odenmemis_aidat = Aidat.objects.filter(site=site, odeme_yapildi_mi=False).aggregate(Sum('tutar'))['tutar__sum'] or 0
-            # BankaHareket üzerinden site filtresi (banka__site)
-            yillik_gelir = BankaHareket.objects.filter(banka__site=site, tarih__year=bu_yil, hareket_tipi='gelir').aggregate(Sum('tutar'))['tutar__sum'] or 0
-            yillik_gider = BankaHareket.objects.filter(banka__site=site, tarih__year=bu_yil, hareket_tipi='gider').aggregate(Sum('tutar'))['tutar__sum'] or 0
+            yillik_gelir = BankaHareket.objects.filter(tarih__year=bu_yil, hareket_tipi='gelir').aggregate(Sum('tutar'))['tutar__sum'] or 0
+            yillik_gider = BankaHareket.objects.filter(tarih__year=bu_yil, hareket_tipi='gider').aggregate(Sum('tutar'))['tutar__sum'] or 0
             depozitolar = Depozito.objects.filter(site=site, durum='alindi').aggregate(Sum('tutar'))['tutar__sum'] or 0
         else:
-            # Superuser veya site yok - tüm veriler
+            print(f"DEBUG - Site filtresi yok, tüm veriler")
             toplam_daire = Daire.objects.count()
             toplam_kisi = Kisi.objects.count()
             toplam_blok = Blok.objects.count()
