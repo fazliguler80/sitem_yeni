@@ -899,7 +899,7 @@ class RaporlarAdmin(admin.AdminSite):
 
     
     
-    
+
     def _get_user_site(self, user):
         """Kullanıcının bağlı olduğu siteyi bul - RAPORLAR İÇİN"""
         from .models import Site, DaireKullanici
@@ -1453,103 +1453,149 @@ class RaporlarAdmin(admin.AdminSite):
         print(f"Toplam depozito tutarı: {depozito_alinan} TL")
         print(f"=====================\n")
         
-        # 3b. Depozito eklemeleri (DepozitoHareket - ekleme) - Yuvarlama farkları hariç
+        # ========== 3b. Depozito eklemeleri ==========
         if baslangic and bitis:
             depozito_eklemeler = DepozitoHareket.objects.filter(
                 tarih__range=[baslangic, bitis],
                 hareket_tipi='ekleme',
                 aidat__isnull=True
-            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
+            )
+            # ========== SİTE FİLTRESİ ==========
+            if site and not request.user.is_superuser:
+                depozito_eklemeler = depozito_eklemeler.filter(depozito__site=site)
+            depozito_eklemeler = depozito_eklemeler.aggregate(Sum('tutar'))['tutar__sum'] or 0
         elif ay:
             depozito_eklemeler = DepozitoHareket.objects.filter(
                 tarih__year=yil,
                 tarih__month=ay,
                 hareket_tipi='ekleme',
                 aidat__isnull=True
-            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
+            )
+            if site and not request.user.is_superuser:
+                depozito_eklemeler = depozito_eklemeler.filter(depozito__site=site)
+            depozito_eklemeler = depozito_eklemeler.aggregate(Sum('tutar'))['tutar__sum'] or 0
         else:
             depozito_eklemeler = DepozitoHareket.objects.filter(
                 tarih__year=yil,
                 hareket_tipi='ekleme',
                 aidat__isnull=True
-            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
-        
-        # 3c. Yuvarlama farkları (aidat ilişkisi olan DepozitoHareket - ekleme)
+            )
+            if site and not request.user.is_superuser:
+                depozito_eklemeler = depozito_eklemeler.filter(depozito__site=site)
+            depozito_eklemeler = depozito_eklemeler.aggregate(Sum('tutar'))['tutar__sum'] or 0
+
+        # ========== 3c. Yuvarlama farkları ==========
         if baslangic and bitis:
             yuvarlama_eklenen = DepozitoHareket.objects.filter(
                 tarih__range=[baslangic, bitis],
                 hareket_tipi='ekleme',
                 aidat__isnull=False
-            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
+            )
+            if site and not request.user.is_superuser:
+                yuvarlama_eklenen = yuvarlama_eklenen.filter(depozito__site=site)
+            yuvarlama_eklenen = yuvarlama_eklenen.aggregate(Sum('tutar'))['tutar__sum'] or 0
             
             yuvarlama_cikarilan = DepozitoHareket.objects.filter(
                 tarih__range=[baslangic, bitis],
                 hareket_tipi='cikarma',
                 aidat__isnull=False
-            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
+            )
+            if site and not request.user.is_superuser:
+                yuvarlama_cikarilan = yuvarlama_cikarilan.filter(depozito__site=site)
+            yuvarlama_cikarilan = yuvarlama_cikarilan.aggregate(Sum('tutar'))['tutar__sum'] or 0
         elif ay:
             yuvarlama_eklenen = DepozitoHareket.objects.filter(
                 tarih__year=yil,
                 tarih__month=ay,
                 hareket_tipi='ekleme',
                 aidat__isnull=False
-            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
+            )
+            if site and not request.user.is_superuser:
+                yuvarlama_eklenen = yuvarlama_eklenen.filter(depozito__site=site)
+            yuvarlama_eklenen = yuvarlama_eklenen.aggregate(Sum('tutar'))['tutar__sum'] or 0
             
             yuvarlama_cikarilan = DepozitoHareket.objects.filter(
                 tarih__year=yil,
                 tarih__month=ay,
                 hareket_tipi='cikarma',
                 aidat__isnull=False
-            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
+            )
+            if site and not request.user.is_superuser:
+                yuvarlama_cikarilan = yuvarlama_cikarilan.filter(depozito__site=site)
+            yuvarlama_cikarilan = yuvarlama_cikarilan.aggregate(Sum('tutar'))['tutar__sum'] or 0
         else:
             yuvarlama_eklenen = DepozitoHareket.objects.filter(
                 tarih__year=yil,
                 hareket_tipi='ekleme',
                 aidat__isnull=False
-            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
+            )
+            if site and not request.user.is_superuser:
+                yuvarlama_eklenen = yuvarlama_eklenen.filter(depozito__site=site)
+            yuvarlama_eklenen = yuvarlama_eklenen.aggregate(Sum('tutar'))['tutar__sum'] or 0
             
             yuvarlama_cikarilan = DepozitoHareket.objects.filter(
                 tarih__year=yil,
                 hareket_tipi='cikarma',
                 aidat__isnull=False
-            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
-        
-        # 3d. Depozito iadeleri ve çıkarmaları
+            )
+            if site and not request.user.is_superuser:
+                yuvarlama_cikarilan = yuvarlama_cikarilan.filter(depozito__site=site)
+            yuvarlama_cikarilan = yuvarlama_cikarilan.aggregate(Sum('tutar'))['tutar__sum'] or 0
+
+        # ========== 3d. Depozito iadeleri ve çıkarmaları ==========
         if baslangic and bitis:
             depozito_iadeler = DepozitoHareket.objects.filter(
                 tarih__range=[baslangic, bitis],
                 hareket_tipi='iade'
-            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
+            )
+            if site and not request.user.is_superuser:
+                depozito_iadeler = depozito_iadeler.filter(depozito__site=site)
+            depozito_iadeler = depozito_iadeler.aggregate(Sum('tutar'))['tutar__sum'] or 0
             
             depozito_cikarmalar = DepozitoHareket.objects.filter(
                 tarih__range=[baslangic, bitis],
                 hareket_tipi='cikarma',
                 aidat__isnull=True
-            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
+            )
+            if site and not request.user.is_superuser:
+                depozito_cikarmalar = depozito_cikarmalar.filter(depozito__site=site)
+            depozito_cikarmalar = depozito_cikarmalar.aggregate(Sum('tutar'))['tutar__sum'] or 0
         elif ay:
             depozito_iadeler = DepozitoHareket.objects.filter(
                 tarih__year=yil,
                 tarih__month=ay,
                 hareket_tipi='iade'
-            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
+            )
+            if site and not request.user.is_superuser:
+                depozito_iadeler = depozito_iadeler.filter(depozito__site=site)
+            depozito_iadeler = depozito_iadeler.aggregate(Sum('tutar'))['tutar__sum'] or 0
             
             depozito_cikarmalar = DepozitoHareket.objects.filter(
                 tarih__year=yil,
                 tarih__month=ay,
                 hareket_tipi='cikarma',
                 aidat__isnull=True
-            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
+            )
+            if site and not request.user.is_superuser:
+                depozito_cikarmalar = depozito_cikarmalar.filter(depozito__site=site)
+            depozito_cikarmalar = depozito_cikarmalar.aggregate(Sum('tutar'))['tutar__sum'] or 0
         else:
             depozito_iadeler = DepozitoHareket.objects.filter(
                 tarih__year=yil,
                 hareket_tipi='iade'
-            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
+            )
+            if site and not request.user.is_superuser:
+                depozito_iadeler = depozito_iadeler.filter(depozito__site=site)
+            depozito_iadeler = depozito_iadeler.aggregate(Sum('tutar'))['tutar__sum'] or 0
             
             depozito_cikarmalar = DepozitoHareket.objects.filter(
                 tarih__year=yil,
                 hareket_tipi='cikarma',
                 aidat__isnull=True
-            ).aggregate(Sum('tutar'))['tutar__sum'] or 0
+            )
+            if site and not request.user.is_superuser:
+                depozito_cikarmalar = depozito_cikarmalar.filter(depozito__site=site)
+            depozito_cikarmalar = depozito_cikarmalar.aggregate(Sum('tutar'))['tutar__sum'] or 0
         
         # ========== 4. TOPLAMLAR ==========
         # Toplam depozito geliri = başlangıç depozitoları + ekstra eklemeler + yuvarlama eklemeler
