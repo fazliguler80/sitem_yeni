@@ -941,6 +941,15 @@ class RaporlarAdmin(admin.AdminSite):
         except Exception as e:
             print(f"⚠️ Session hatası: {e}")
         
+        # 4. Hiçbir yerde bulunamazsa, ilk aktif siteyi döndür (geçici)
+        try:
+            site = Site.objects.filter(aktif=True).first()
+            if site:
+                print(f"⚠️ Hiçbir yerde bulunamadı, ilk aktif site: {site.adi}")
+                return site
+        except:
+            pass
+        
         print(f"❌ Site bulunamadı!")
         return None
      
@@ -1445,9 +1454,11 @@ class RaporlarAdmin(admin.AdminSite):
         # ========== SİTE FİLTRESİ ==========
         if site and not request.user.is_superuser:
             depozito_alinan = Depozito.objects.filter(site=site).aggregate(Sum('tutar'))['tutar__sum'] or 0
+            depozito_sayisi = Depozito.objects.filter(site=site).count()  # SİTE FİLTRESİ EKLENDİ
+        else:
+            depozito_sayisi = Depozito.objects.count()
         
         # DEBUG - Konsola yazdır
-        depozito_sayisi = Depozito.objects.count()
         print(f"\n=== DEPOZITO DEBUG ===")
         print(f"Toplam depozito kaydı: {depozito_sayisi}")
         print(f"Toplam depozito tutarı: {depozito_alinan} TL")
@@ -1460,7 +1471,6 @@ class RaporlarAdmin(admin.AdminSite):
                 hareket_tipi='ekleme',
                 aidat__isnull=True
             )
-            # ========== SİTE FİLTRESİ ==========
             if site and not request.user.is_superuser:
                 depozito_eklemeler = depozito_eklemeler.filter(depozito__site=site)
             depozito_eklemeler = depozito_eklemeler.aggregate(Sum('tutar'))['tutar__sum'] or 0
