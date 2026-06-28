@@ -2951,9 +2951,6 @@ class MaasBordrosuAdmin(BaseSiteAdmin):
 
 # Modelleri kaydet - SAKIN @admin.register KULLANMA!
 # Modelleri kaydet - ÖNCE AsgariUcret ve MaasBordrosu
-admin_site.register(AsgariUcret, AsgariUcretAdmin)
-admin_site.register(MaasBordrosu, MaasBordrosuAdmin)
-admin_site.register(Personel)
 
 from django.urls import path
 from django.shortcuts import get_object_or_404, redirect
@@ -3399,6 +3396,9 @@ admin_site.register(Group, CustomGroupAdmin)
 # Diğer modeller
 admin_site.register(Site, SiteAdmin)
 admin_site.register(SiteAyarlari, SiteAyarlariAdmin)
+admin_site.register(Personel, PersonelAdmin)
+admin_site.register(AsgariUcret, AsgariUcretAdmin)
+admin_site.register(MaasBordrosu, MaasBordrosuAdmin)
 admin_site.register(Blok)
 admin_site.register(Daire, DaireAdmin)
 admin_site.register(Kisi, KisiAdmin)
