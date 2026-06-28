@@ -191,6 +191,9 @@ class BaseSiteAdmin(admin.ModelAdmin):
     
     class BaseSiteAdmin(admin.ModelAdmin):
     
+
+
+    
         def _get_user_site(self, user):
             """Kullanıcının bağlı olduğu siteyi bul - ADMIN LİSTELERİ İÇİN"""
             from .models import Site, DaireKullanici
