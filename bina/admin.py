@@ -280,7 +280,9 @@ class YoneticiAdmin(BaseSiteAdmin):
 
 # bina/admin.py - Düzeltilmiş DaireIliskisiInline
 
-class DaireIliskisiInline(BaseSiteAdmin):
+# bina/admin.py - DaireIliskisiInline sınıfını düzeltin
+
+class DaireIliskisiInline(admin.TabularInline):
     """Kişi detay sayfasında daire ilişkilerini gösterir"""
     model = DaireIliskisi
     extra = 1
@@ -293,7 +295,7 @@ class DaireIliskisiInline(BaseSiteAdmin):
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
-class DaireIliskisiInlineForDaire(BaseSiteAdmin):
+class DaireIliskisiInlineForDaire(admin.TabularInline):
     """Daire detay sayfasında kişi ilişkilerini gösterir"""
     model = DaireIliskisi
     extra = 1
@@ -360,11 +362,17 @@ class FirmaAdmin(BaseSiteAdmin):
     search_fields = ('firma_adi', 'yetkili_kisi')
 
 
+# bina/admin.py - AbonelikAdmin sınıfını düzeltin
+
 class AbonelikAdmin(BaseSiteAdmin):
-    list_display = ('abone_no', 'daire', 'tip', 'baslangic_tarihi', 'bitis_tarihi', 'aktif_mi')
+    list_display = ('abone_no', 'daire_bilgisi', 'tip', 'baslangic_tarihi', 'bitis_tarihi', 'aktif_mi')
     list_filter = ('tip', 'aktif_mi')
     search_fields = ('abone_no', 'daire__blok__blok_adi', 'daire__daire_no')
     list_editable = ('aktif_mi',)
+    
+    def daire_bilgisi(self, obj):
+        return str(obj.daire) if obj.daire else '-'
+    daire_bilgisi.short_description = 'Daire'
     
     fieldsets = (
         ('Temel Bilgiler', {
@@ -379,11 +387,17 @@ class AbonelikAdmin(BaseSiteAdmin):
     )
 
 
+# bina/admin.py - FaturaAdmin sınıfını düzeltin
+
 class FaturaAdmin(BaseSiteAdmin):
-    list_display = ('tip', 'aciklama', 'tarih', 'dosya', 'olusturma_tarihi')
+    list_display = ('tip', 'aciklama', 'tarih', 'dosya', 'olusturma_tarihi_goster')
     list_filter = ('tip', 'tarih')
     search_fields = ('aciklama',)
     date_hierarchy = 'tarih'
+    
+    def olusturma_tarihi_goster(self, obj):
+        return obj.olusturma_tarihi.strftime('%d/%m/%Y %H:%M') if obj.olusturma_tarihi else '-'
+    olusturma_tarihi_goster.short_description = 'Oluşturma Tarihi'
     
     fieldsets = (
         ('Fatura Bilgileri', {
