@@ -1934,7 +1934,7 @@ class RaporlarAdmin(admin.AdminSite):
             toplam_daire = Daire.objects.count()
             toplam_kisi = Kisi.objects.count()
             toplam_blok = Blok.objects.count()
-            bankalar = Banka.objects.all()
+            bankalar = Banka.objects.all()  # SADECE BİR KERE
             odenmemis_aidat = Aidat.objects.filter(odeme_yapildi_mi=False).aggregate(Sum('tutar'))['tutar__sum'] or 0
             yillik_gelir = BankaHareket.objects.filter(tarih__year=bu_yil, hareket_tipi='gelir').aggregate(Sum('tutar'))['tutar__sum'] or 0
             yillik_gider = BankaHareket.objects.filter(tarih__year=bu_yil, hareket_tipi='gider').aggregate(Sum('tutar'))['tutar__sum'] or 0
