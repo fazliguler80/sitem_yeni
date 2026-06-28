@@ -1641,12 +1641,7 @@ class RaporlarAdmin(admin.AdminSite):
             if banka_id and str(banka_id).isdigit():
                 hareketler = hareketler.filter(banka__id=int(banka_id))
             donem = f"{yil} Yılı"
-        
-        # ========== SİTE FİLTRESİ - KALDIRILDI (Banka'da site alanı yok) ==========
-        # site = self._get_user_site(request.user)
-        # if site and not request.user.is_superuser:
-        #     hareketler = hareketler.filter(banka__site=site)  # ❌ Banka'da site alanı yok!
-        
+                       
         toplam_gelir = hareketler.filter(hareket_tipi='gelir').aggregate(Sum('tutar'))['tutar__sum'] or 0
         toplam_gider = hareketler.filter(hareket_tipi='gider').aggregate(Sum('tutar'))['tutar__sum'] or 0
         bankalar = Banka.objects.all()
@@ -1922,26 +1917,25 @@ class RaporlarAdmin(admin.AdminSite):
 
     def genel_durum_raporu(self, request):
         site = self._get_user_site(request.user)
+        bu_yil = datetime.now().year
         
         if site and not request.user.is_superuser:
+            # Site bazlı filtreleme
             toplam_daire = Daire.objects.filter(site=site).count()
             toplam_kisi = Kisi.objects.filter(site=site).count()
             toplam_blok = Blok.objects.filter(site=site).count()
-            # Banka'da site alanı yok, tüm bankaları göster
-            bankalar = Banka.objects.all()
+            bankalar = Banka.objects.all()  # Banka'da site alanı yok, tüm bankalar
             odenmemis_aidat = Aidat.objects.filter(site=site, odeme_yapildi_mi=False).aggregate(Sum('tutar'))['tutar__sum'] or 0
-            bu_yil = datetime.now().year
-            # BankaHareket'te site filtresi kaldırıldı
             yillik_gelir = BankaHareket.objects.filter(tarih__year=bu_yil, hareket_tipi='gelir').aggregate(Sum('tutar'))['tutar__sum'] or 0
             yillik_gider = BankaHareket.objects.filter(tarih__year=bu_yil, hareket_tipi='gider').aggregate(Sum('tutar'))['tutar__sum'] or 0
             depozitolar = Depozito.objects.filter(site=site, durum='alindi').aggregate(Sum('tutar'))['tutar__sum'] or 0
         else:
+            # Superuser veya site yok - tüm veriler
             toplam_daire = Daire.objects.count()
             toplam_kisi = Kisi.objects.count()
             toplam_blok = Blok.objects.count()
             bankalar = Banka.objects.all()
             odenmemis_aidat = Aidat.objects.filter(odeme_yapildi_mi=False).aggregate(Sum('tutar'))['tutar__sum'] or 0
-            bu_yil = datetime.now().year
             yillik_gelir = BankaHareket.objects.filter(tarih__year=bu_yil, hareket_tipi='gelir').aggregate(Sum('tutar'))['tutar__sum'] or 0
             yillik_gider = BankaHareket.objects.filter(tarih__year=bu_yil, hareket_tipi='gider').aggregate(Sum('tutar'))['tutar__sum'] or 0
             depozitolar = Depozito.objects.filter(durum='alindi').aggregate(Sum('tutar'))['tutar__sum'] or 0
