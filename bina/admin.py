@@ -1404,6 +1404,7 @@ class RaporlarAdmin(admin.AdminSite):
             depozito_alinan = Depozito.objects.filter(site=site).aggregate(Sum('tutar'))['tutar__sum'] or 0
         
         # DEBUG - Konsola yazdır
+        depozito_sayisi = Depozito.objects.count()
         print(f"\n=== DEPOZITO DEBUG ===")
         print(f"Toplam depozito kaydı: {depozito_sayisi}")
         print(f"Toplam depozito tutarı: {depozito_alinan} TL")
@@ -1624,24 +1625,26 @@ class RaporlarAdmin(admin.AdminSite):
         # Kullanıcının sitesini bul
         site = self._get_user_site(request.user)
         
-        # Tarih aralığına göre filtreleme
+        # ========== Tarih aralığına göre filtreleme ==========
         if baslangic and bitis:
             hareketler = BankaHareket.objects.filter(tarih__range=[baslangic, bitis])
             if banka_id:
-                hareketler = hareketler.filter(banka_id=banka_id)
+                # banka_id zaten Banka ID'si, direkt kullan
+                hareketler = hareketler.filter(banka__id=banka_id)
             donem = f"{baslangic.strftime('%d/%m/%Y')} - {bitis.strftime('%d/%m/%Y')}"
         elif ay:
             hareketler = BankaHareket.objects.filter(tarih__year=yil, tarih__month=ay)
             if banka_id:
-                hareketler = hareketler.filter(banka_id=banka_id)
+                hareketler = hareketler.filter(banka__id=banka_id)
             donem = f"{ay}/{yil}"
         else:
             hareketler = BankaHareket.objects.filter(tarih__year=yil)
             if banka_id:
-                hareketler = hareketler.filter(banka_id=banka_id)
+                hareketler = hareketler.filter(banka__id=banka_id)
             donem = f"{yil} Yılı"
-        
+
         # ========== SİTE FİLTRESİ ==========
+        site = self._get_user_site(request.user)
         if site and not request.user.is_superuser:
             hareketler = hareketler.filter(banka__site=site)
         
@@ -1925,7 +1928,7 @@ class RaporlarAdmin(admin.AdminSite):
             toplam_daire = Daire.objects.filter(site=site).count()
             toplam_kisi = Kisi.objects.filter(site=site).count()
             toplam_blok = Blok.objects.filter(site=site).count()
-            bankalar = Banka.objects.filter(site=site)
+            bankalar = Banka.objects.all()
             odenmemis_aidat = Aidat.objects.filter(site=site, odeme_yapildi_mi=False).aggregate(Sum('tutar'))['tutar__sum'] or 0
             bu_yil = datetime.now().year
             yillik_gelir = BankaHareket.objects.filter(banka__site=site, tarih__year=bu_yil, hareket_tipi='gelir').aggregate(Sum('tutar'))['tutar__sum'] or 0
