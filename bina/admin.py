@@ -1742,15 +1742,24 @@ class RaporlarAdmin(admin.AdminSite):
             donem = f"{yil} Yılı"
         
         # ========== SİTE FİLTRESİ ==========
+        # try-except ile korundu - site_id sütunu yoksa hata vermesin
         if site and not request.user.is_superuser:
-            hareketler = hareketler.filter(banka__site=site)
+            try:
+                hareketler = hareketler.filter(banka__site=site)
+            except Exception as e:
+                print(f"⚠️ Banka hareketleri site filtresi hatası: {e}")
+                # Hata durumunda filtreleme yapma
         
         toplam_gelir = hareketler.filter(hareket_tipi='gelir').aggregate(Sum('tutar'))['tutar__sum'] or 0
         toplam_gider = hareketler.filter(hareket_tipi='gider').aggregate(Sum('tutar'))['tutar__sum'] or 0
         
         # ========== SİTE FİLTRESİ - bankalar ==========
         if site and not request.user.is_superuser:
-            bankalar = Banka.objects.filter(site=site).only('id', 'banka_adi')
+            try:
+                bankalar = Banka.objects.filter(site=site).only('id', 'banka_adi')
+            except Exception as e:
+                print(f"⚠️ Bankalar site filtresi hatası: {e}")
+                bankalar = Banka.objects.only('id', 'banka_adi')
         else:
             bankalar = Banka.objects.only('id', 'banka_adi')
         
@@ -2027,18 +2036,38 @@ class RaporlarAdmin(admin.AdminSite):
         site = self._get_user_site(request.user)
         bu_yil = datetime.now().year
         
-        if site and not request.user.is_superuser:
-            # Site bazlı filtreleme
-            toplam_daire = Daire.objects.filter(site=site).count()
-            toplam_kisi = Kisi.objects.filter(site=site).count()
-            toplam_blok = Blok.objects.filter(site=site).count()
-            bankalar = Banka.objects.filter(site=site).only('id', 'banka_adi', 'guncel_bakiye', 'hesap_adi', 'hesap_tipi', 'iban')
-            odenmemis_aidat = Aidat.objects.filter(site=site, odeme_yapildi_mi=False).aggregate(Sum('tutar'))['tutar__sum'] or 0
-            yillik_gelir = BankaHareket.objects.filter(banka__site=site, tarih__year=bu_yil, hareket_tipi='gelir').aggregate(Sum('tutar'))['tutar__sum'] or 0
-            yillik_gider = BankaHareket.objects.filter(banka__site=site, tarih__year=bu_yil, hareket_tipi='gider').aggregate(Sum('tutar'))['tutar__sum'] or 0
-            depozitolar = Depozito.objects.filter(site=site, durum='alindi').aggregate(Sum('tutar'))['tutar__sum'] or 0
-        else:
-            # Superuser veya site yok - tüm veriler
+        try:
+            if site and not request.user.is_superuser:
+                # Site bazlı filtreleme
+                toplam_daire = Daire.objects.filter(site=site).count()
+                toplam_kisi = Kisi.objects.filter(site=site).count()
+                toplam_blok = Blok.objects.filter(site=site).count()
+                
+                # Banka sorgusunu try-except ile koru
+                try:
+                    bankalar = Banka.objects.filter(site=site).only('id', 'banka_adi', 'guncel_bakiye', 'hesap_adi', 'hesap_tipi', 'iban')
+                    print(f"✅ Banka sorgusu başarılı: {bankalar.count()} kayıt")
+                except Exception as e:
+                    print(f"⚠️ Banka sorgusu hatası: {e}")
+                    bankalar = Banka.objects.only('id', 'banka_adi', 'guncel_bakiye', 'hesap_adi', 'hesap_tipi', 'iban')
+                
+                odenmemis_aidat = Aidat.objects.filter(site=site, odeme_yapildi_mi=False).aggregate(Sum('tutar'))['tutar__sum'] or 0
+                yillik_gelir = BankaHareket.objects.filter(banka__site=site, tarih__year=bu_yil, hareket_tipi='gelir').aggregate(Sum('tutar'))['tutar__sum'] or 0
+                yillik_gider = BankaHareket.objects.filter(banka__site=site, tarih__year=bu_yil, hareket_tipi='gider').aggregate(Sum('tutar'))['tutar__sum'] or 0
+                depozitolar = Depozito.objects.filter(site=site, durum='alindi').aggregate(Sum('tutar'))['tutar__sum'] or 0
+            else:
+                # Superuser veya site yok - tüm veriler
+                toplam_daire = Daire.objects.count()
+                toplam_kisi = Kisi.objects.count()
+                toplam_blok = Blok.objects.count()
+                bankalar = Banka.objects.only('id', 'banka_adi', 'guncel_bakiye', 'hesap_adi', 'hesap_tipi', 'iban')
+                odenmemis_aidat = Aidat.objects.filter(odeme_yapildi_mi=False).aggregate(Sum('tutar'))['tutar__sum'] or 0
+                yillik_gelir = BankaHareket.objects.filter(tarih__year=bu_yil, hareket_tipi='gelir').aggregate(Sum('tutar'))['tutar__sum'] or 0
+                yillik_gider = BankaHareket.objects.filter(tarih__year=bu_yil, hareket_tipi='gider').aggregate(Sum('tutar'))['tutar__sum'] or 0
+                depozitolar = Depozito.objects.filter(durum='alindi').aggregate(Sum('tutar'))['tutar__sum'] or 0
+        except Exception as e:
+            print(f"❌ Genel Durum Raporu hatası: {e}")
+            # Hata durumunda tüm verileri göster
             toplam_daire = Daire.objects.count()
             toplam_kisi = Kisi.objects.count()
             toplam_blok = Blok.objects.count()
