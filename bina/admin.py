@@ -256,7 +256,7 @@ class DaireIliskisiAdmin(BaseSiteAdmin):
     pasif_yap.short_description = "Seçili ilişkileri pasif yap"
 
 # ==================== SİTE AYARLARI ADMIN ====================
-class SiteAyarlariAdmin(BaseSiteAdmin):
+class SiteAyarlariAdmin(admin.ModelAdmin):
     list_display = ('site', 'sabit_aidat_miktari', 'sabit_aidat_aktif_mi', 'gider_yuvarlama_aktif')
     list_filter = ('sabit_aidat_aktif_mi', 'gider_yuvarlama_aktif')
     search_fields = ('site__adi',)
