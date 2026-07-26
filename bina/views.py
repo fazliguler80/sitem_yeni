@@ -54,7 +54,8 @@ def portal_site_degistir(request, site_id):
 
 @login_required(login_url='/portal/login/')
 def portal_depozito_gecmisi(request):
-    """Portal kullanıcısının depozito geçmişini göster"""
+    """Portal kullanıcısının depozito geçmişini göster (Ek depozito borcu dahil)"""
+    from decimal import Decimal
     
     # Giriş yapan kullanıcının daire bilgisini bul
     try:
@@ -68,57 +69,82 @@ def portal_depozito_gecmisi(request):
     depozito = Depozito.objects.filter(daire=daire, durum='alindi').first()
     
     if not depozito:
-        # Depozito kaydı yoksa
         context = {
             'daire': daire,
             'depozito_var': False,
             'gecmis_hareketler': [],
-            'toplam_depozito': 0
+            'toplam_depozito': 0,
+            'guncel_bakiye': 0,
+            'ek_depozito_borcu': 0,
         }
         return render(request, 'portal/depozito_gecmisi.html', context)
     
-    # Depozito hareketlerini al (en eski -> en yeni)
+    # ========== EK DEPOZİTO BORCU ==========
+    ek_depozito_borcu = Decimal('0.00')
+    if depozito.ek_depozito_tutari and not depozito.ek_depozito_odendi_mi:
+        ek_depozito_borcu = Decimal(str(depozito.ek_depozito_tutari))
+    
+    # ========== GUNCEL BAKIYE ==========
+    guncel_bakiye = Decimal(str(depozito.tutar))
+    
+    # Ödenmiş ek depozitoyu ekle
+    if depozito.ek_depozito_odendi_mi and depozito.ek_depozito_tutari:
+        guncel_bakiye += Decimal(str(depozito.ek_depozito_tutari))
+    
+    # İade edilen tutarı düş
+    if depozito.iade_tutari:
+        guncel_bakiye -= Decimal(str(depozito.iade_tutari))
+    
+    # Depozito hareketlerini al
     hareketler = depozito.hareketler.all().order_by('tarih', 'id')
     
     # Her harekete bakiye bilgisi ekle
-    bakiye = 0
+    bakiye_float = float(guncel_bakiye)  # Başlangıç bakiyesi
     hareket_listesi = []
     
-    for hareket in hareketler:
+    # Önce hareketleri ters sırada göster (en yeni en üstte)
+    for hareket in hareketler.order_by('-tarih', '-id'):
         if hareket.hareket_tipi == 'ekleme':
-            bakiye += float(hareket.tutar)
-            islem_tip = 'depozito_eklendi'
             islem_icon = '➕'
             renk = 'success'
+            tutar_goster = f"+ {float(hareket.tutar):.2f} TL"
+        elif hareket.hareket_tipi == 'ek_depozito':
+            islem_icon = '💰'
+            renk = 'info'
+            tutar_goster = f"+ {float(hareket.tutar):.2f} TL"
         elif hareket.hareket_tipi == 'cikarma':
-            bakiye -= float(hareket.tutar)
-            islem_tip = 'depozito_eksildi'
             islem_icon = '➖'
             renk = 'danger'
+            tutar_goster = f"- {float(hareket.tutar):.2f} TL"
         else:  # iade
-            bakiye -= float(hareket.tutar)
-            islem_tip = 'depozito_iade'
             islem_icon = '↩️'
             renk = 'warning'
+            tutar_goster = f"- {float(hareket.tutar):.2f} TL"
         
         hareket_listesi.append({
             'tarih': hareket.tarih,
             'islem_tipi': hareket.get_hareket_tipi_display(),
-            'islem_tip_kodu': islem_tip,
             'islem_icon': islem_icon,
             'renk': renk,
             'tutar': float(hareket.tutar),
-            'bakiye': bakiye,
+            'tutar_goster': tutar_goster,
             'aciklama': hareket.aciklama,
-            'gider': hareket.gider  # Bağlı gider varsa
+            'gider': hareket.gider,
+            'aidat': hareket.aidat,
         })
+    
+    # Toplam depozito (ana depozito + ödenen ek depozito)
+    toplam_depozito = float(depozito.tutar)
+    if depozito.ek_depozito_odendi_mi and depozito.ek_depozito_tutari:
+        toplam_depozito += float(depozito.ek_depozito_tutari)
     
     context = {
         'daire': daire,
         'depozito': depozito,
         'depozito_var': True,
-        'toplam_depozito': bakiye,  # ← ARTIK HAREKETLERLE TOPLAM
-        'guncel_bakiye': bakiye,
+        'toplam_depozito': toplam_depozito,
+        'guncel_bakiye': float(guncel_bakiye),
+        'ek_depozito_borcu': float(ek_depozito_borcu),
         'gecmis_hareketler': hareket_listesi,
     }
     
@@ -127,7 +153,8 @@ def portal_depozito_gecmisi(request):
 
 @login_required(login_url='/portal/login/')
 def portal_depozito_detay(request, depozito_id):
-    """Tek bir depozitonun detaylı geçmişi"""
+    """Tek bir depozitonun detaylı geçmişi (Ek depozito borcu dahil)"""
+    from decimal import Decimal
     
     depozito = get_object_or_404(Depozito, id=depozito_id)
     
@@ -141,33 +168,83 @@ def portal_depozito_detay(request, depozito_id):
         messages.error(request, "Daire bilginize ulaşılamadı.")
         return redirect('portal_depozito_gecmisi')
     
-    hareketler = depozito.hareketler.all().order_by('tarih', 'id')
+    # ========== EK DEPOZİTO BORCU ==========
+    ek_depozito_borcu = Decimal('0.00')
+    if depozito.ek_depozito_tutari and not depozito.ek_depozito_odendi_mi:
+        ek_depozito_borcu = Decimal(str(depozito.ek_depozito_tutari))
     
-    # Bakiye hesaplama
-    bakiye = 0
+    # ========== GUNCEL BAKIYE ==========
+    guncel_bakiye = Decimal(str(depozito.tutar))
+    
+    if depozito.ek_depozito_odendi_mi and depozito.ek_depozito_tutari:
+        guncel_bakiye += Decimal(str(depozito.ek_depozito_tutari))
+    
+    if depozito.iade_tutari:
+        guncel_bakiye -= Decimal(str(depozito.iade_tutari))
+    
+    # Hareketler
+    hareketler = depozito.hareketler.all().order_by('-tarih', '-id')
+    
+    # Bakiye hesaplama (en eski -> en yeni)
+    bakiye_hesap = Decimal('0.00')
     hareket_listesi = []
     
+    # Önce eski hareketleri sıralı al
+    eski_hareketler = depozito.hareketler.all().order_by('tarih', 'id')
+    for h in eski_hareketler:
+        if h.hareket_tipi in ['ekleme', 'ek_depozito']:
+            bakiye_hesap += Decimal(str(h.tutar))
+        elif h.hareket_tipi in ['cikarma', 'iade']:
+            bakiye_hesap -= Decimal(str(h.tutar))
+        
+        # Her harekete bakiye ekle
+        h.bakiye = float(bakiye_hesap)
+    
+    # Sonra detaylı liste oluştur (en yeni en üstte)
     for h in hareketler:
         if h.hareket_tipi == 'ekleme':
-            bakiye += float(h.tutar)
-        elif h.hareket_tipi in ['cikarma', 'iade']:
-            bakiye -= float(h.tutar)
+            islem_icon = '➕'
+            renk = 'success'
+            tip_label = 'Depozitoya Eklendi'
+        elif h.hareket_tipi == 'ek_depozito':
+            islem_icon = '💰'
+            renk = 'info'
+            tip_label = 'Ek Depozito Eklendi'
+        elif h.hareket_tipi == 'cikarma':
+            islem_icon = '➖'
+            renk = 'danger'
+            tip_label = 'Depozitodan Düşüldü'
+        else:
+            islem_icon = '↩️'
+            renk = 'warning'
+            tip_label = 'İade Edildi'
         
         hareket_listesi.append({
             'id': h.id,
             'tarih': h.tarih,
             'islem_tipi': h.get_hareket_tipi_display(),
+            'islem_icon': islem_icon,
+            'renk': renk,
+            'tip_label': tip_label,
             'tutar': float(h.tutar),
-            'bakiye': bakiye,
+            'bakiye': float(bakiye_hesap),
             'aciklama': h.aciklama,
             'gider': h.gider,
+            'aidat': h.aidat,
         })
+    
+    # Toplam depozito
+    toplam_depozito = float(depozito.tutar)
+    if depozito.ek_depozito_odendi_mi and depozito.ek_depozito_tutari:
+        toplam_depozito += float(depozito.ek_depozito_tutari)
     
     context = {
         'depozito': depozito,
+        'daire': depozito.daire,
+        'toplam_depozito': toplam_depozito,
+        'guncel_bakiye': float(guncel_bakiye),
+        'ek_depozito_borcu': float(ek_depozito_borcu),
         'hareketler': hareket_listesi,
-        'toplam_tutar': float(depozito.tutar),
-        'guncel_bakiye': bakiye,
     }
     
     return render(request, 'portal/depozito_detay.html', context)
