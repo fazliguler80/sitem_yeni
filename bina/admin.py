@@ -892,7 +892,13 @@ class AidatAdmin(TarihFiltresiMixin, BaseSiteAdmin):
     kim_odedi_bilgisi.short_description = "Ödeyen Kişi"
     kim_odedi_bilgisi.admin_order_field = 'kim_odedi__ad_soyad'
     
-    actions = ['sabit_aidat_olustur',  'toplu_odeme_yap', 'toplu_odeme_iptal', 'aidat_raporu_excel']
+    actions = [
+        'sabit_aidat_olustur',           # Tüm dairelere bu ay
+        'sabit_aidat_olustur_ozel',      # Seçili dairelere özel ay/yıl  <-- BUNU EKLEYİN
+        'toplu_odeme_yap', 
+        'toplu_odeme_iptal', 
+        'aidat_raporu_excel'
+    ]
     
     def toplu_odeme_yap(self, request, queryset):
         """Seçili aidatları toplu ödeme yap"""
