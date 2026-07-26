@@ -1,21 +1,8 @@
 {% extends "portal/base.html" %}
 
 {% block content %}
-<!-- Template'de en üste ekleyin -->
-<div style="background: red; color: white; padding: 10px;">
-    TEST: {{ ek_depozito_borcu }}
-</div>
 <h2>💰 Depozito Geçmişim</h2>
 <p>Daire: {{ daire.blok.blok_adi }}-{{ daire.daire_no }}</p>
-
-<!-- ========== DEBUG KODU ========== -->
-<div style="background: #f8f9fa; padding: 15px; border: 2px solid #ff9800; margin-bottom: 10px; border-radius: 5px;">
-    <strong>🔍 Debug Bilgileri:</strong><br>
-    ek_depozito_tutari: {{ depozito.ek_depozito_tutari }}<br>
-    ek_depozito_odendi_mi: {{ depozito.ek_depozito_odendi_mi }}<br>
-    <strong style="color: #dc3545;">ek_depozito_borcu: {{ ek_depozito_borcu }}</strong>
-</div>
-<!-- ========== DEBUG SONU ========== -->
 
 {% if hata %}
     <div style="background: #f8d7da; padding: 15px; border-radius: 5px; color: #721c24;">
@@ -38,7 +25,7 @@
             <div class="amount">{{ guncel_bakiye|floatformat:2 }} TL</div>
             <small>Kullanılabilir depozito</small>
         </div>
-        <!-- EK DEPOZİTO BORCU KARTI -->
+        <!-- Ek Depozito Borcu Kartı -->
         <div class="card bg-warning-light">
             <h3>⚠️ Ek Depozito Borcu</h3>
             <div class="amount" style="color: #856404;">
@@ -52,7 +39,7 @@
         </div>
     </div>
     
-    <!-- EK DEPOZİTO BORCU UYARISI - Buton OLMADAN -->
+    <!-- Ek Depozito Borcu Uyarısı -->
     {% if ek_depozito_borcu > 0 %}
     <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin-bottom: 20px; border-left: 4px solid #ffc107;">
         <h4 style="margin-top: 0; color: #856404;">⚠️ Ek Depozito Borcunuz Bulunuyor!</h4>
@@ -278,11 +265,9 @@
     .table-success { background-color: #d4edda; }
     .table-danger { background-color: #f8d7da; }
     .table-warning { background-color: #fff3cd; }
-    .badge-warning { background: #ffc107; color: #212529; }
     .btn { background: #28a745; color: white; padding: 8px 15px; text-decoration: none; border-radius: 5px; display: inline-block; }
     .btn:hover { background: #218838; }
     
-    /* Kart Stilleri */
     .card-container {
         display: flex;
         gap: 20px;
@@ -303,7 +288,6 @@
     .card .amount { font-size: 28px; font-weight: bold; color: #333; }
     .card small { color: #666; }
     
-    /* Tablo Stilleri */
     .table-responsive {
         overflow-x: auto;
         margin: 15px 0;
