@@ -1,0 +1,6 @@
+// bina/static/admin/js/site_admin.js
+(function($) {
+    $(document).ready(function() {
+        console.log('Site Admin JS loaded');
+    });
+})(django.jQuery);

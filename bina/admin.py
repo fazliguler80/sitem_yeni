@@ -189,48 +189,58 @@ class BaseSiteAdmin(admin.ModelAdmin):
                     kwargs['queryset'] = Site.objects.none()
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
     
-    class BaseSiteAdmin(admin.ModelAdmin):
-    
-
-
-
-        def _get_user_site(self, user):
-            """Kullanıcının bağlı olduğu siteyi bul - ADMIN LİSTELERİ İÇİN"""
-            from .models import Site, DaireKullanici
-            
-            # 1. Site admini mi?
-            try:
-                site = Site.objects.filter(admin_user=user, aktif=True).first()
-                if site:
-                    return site
-            except:
-                pass
-            
-            # 2. Daire kullanıcısı mı?
-            try:
-                daire_kullanici = DaireKullanici.objects.filter(kullanici=user).first()
-                if daire_kullanici and daire_kullanici.daire:
-                    if hasattr(daire_kullanici.daire, 'site') and daire_kullanici.daire.site:
-                        return daire_kullanici.daire.site
-            except:
-                pass
-            
-            # 3. Session'dan site bilgisi
-            try:
-                import sys
-                for frame in sys._current_frames().values():
-                    if 'request' in frame.f_locals:
-                        request = frame.f_locals['request']
-                        if hasattr(request, 'session'):
-                            site_id = request.session.get('aktif_site_id') or request.session.get('portal_site_id')
-                            if site_id:
-                                site = Site.objects.filter(id=site_id, aktif=True).first()
-                                if site:
-                                    return site
-            except:
-                pass
-            
-            return None
+    def _get_user_site(self, user):
+        """Kullanıcının bağlı olduğu siteyi bul - ADMIN LİSTELERİ İÇİN"""
+        from .models import Site, DaireKullanici
+        
+        print(f"🔍 BaseSiteAdmin._get_user_site: Kullanıcı: {user.username}")
+        
+        # 1. Site admini mi?
+        try:
+            site = Site.objects.filter(admin_user=user, aktif=True).first()
+            if site:
+                print(f"✅ Site admini bulundu: {site.adi}")
+                return site
+        except Exception as e:
+            print(f"⚠️ Site admini hatası: {e}")
+        
+        # 2. Daire kullanıcısı mı?
+        try:
+            daire_kullanici = DaireKullanici.objects.filter(kullanici=user).first()
+            if daire_kullanici and daire_kullanici.daire:
+                if hasattr(daire_kullanici.daire, 'site') and daire_kullanici.daire.site:
+                    print(f"✅ Daire kullanıcısı bulundu, site: {daire_kullanici.daire.site.adi}")
+                    return daire_kullanici.daire.site
+        except Exception as e:
+            print(f"⚠️ Daire kullanıcısı hatası: {e}")
+        
+        # 3. Session'dan site bilgisi
+        try:
+            import sys
+            for frame in sys._current_frames().values():
+                if 'request' in frame.f_locals:
+                    request = frame.f_locals['request']
+                    if hasattr(request, 'session'):
+                        site_id = request.session.get('aktif_site_id') or request.session.get('portal_site_id')
+                        if site_id:
+                            site = Site.objects.filter(id=site_id, aktif=True).first()
+                            if site:
+                                print(f"✅ Session'dan site bulundu: {site.adi}")
+                                return site
+        except Exception as e:
+            print(f"⚠️ Session hatası: {e}")
+        
+        # 4. Hiçbir yerde bulunamazsa, ilk aktif siteyi döndür (geçici)
+        try:
+            site = Site.objects.filter(aktif=True).first()
+            if site:
+                print(f"⚠️ Hiçbir yerde bulunamadı, ilk aktif site: {site.adi}")
+                return site
+        except:
+            pass
+        
+        print(f"❌ Site bulunamadı!")
+        return None
 
 # ==================== DAİRE İLİŞKİLERİ ADMIN ====================
 class DaireIliskisiAdmin(BaseSiteAdmin):
