@@ -4,6 +4,17 @@
 <h2>💰 Depozito Geçmişim</h2>
 <p>Daire: {{ daire.blok.blok_adi }}-{{ daire.daire_no }}</p>
 
+<!-- ========== DEBUG KODU - BURAYA EKLEYİN ========== -->
+<div style="background: #f8f9fa; padding: 10px; border: 1px solid #ddd; margin-bottom: 10px; border-radius: 5px;">
+    <small>
+        <strong>🔍 Debug Bilgileri:</strong><br>
+        ek_depozito_tutari: {{ depozito.ek_depozito_tutari }}<br>
+        ek_depozito_odendi_mi: {{ depozito.ek_depozito_odendi_mi }}<br>
+        ek_depozito_borcu: {{ ek_depozito_borcu }}
+    </small>
+</div>
+<!-- ========== DEBUG SONU ========== -->
+
 {% if hata %}
     <div style="background: #f8d7da; padding: 15px; border-radius: 5px; color: #721c24;">
         Daire bilgilerinize ulaşılamadı. Lütfen yönetimle iletişime geçin.
