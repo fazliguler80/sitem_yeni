@@ -38,26 +38,31 @@
             <div class="amount">{{ guncel_bakiye|floatformat:2 }} TL</div>
             <small>Kullanılabilir depozito</small>
         </div>
-        <!-- EK DEPOZİTO BORCU KARTI - YENİ -->
+        <!-- EK DEPOZİTO BORCU KARTI -->
         <div class="card bg-warning-light">
             <h3>⚠️ Ek Depozito Borcu</h3>
-            <div class="amount" style="color: #856404;">{{ ek_depozito_borcu|floatformat:2 }} TL</div>
+            <div class="amount" style="color: #856404;">
+                {% if ek_depozito_borcu > 0 %}
+                    {{ ek_depozito_borcu|floatformat:2 }} TL
+                {% else %}
+                    0.00 TL
+                {% endif %}
+            </div>
             <small>Ödenmesi gereken ek depozito</small>
         </div>
     </div>
     
-    <!-- EK DEPOZİTO BORCU UYARISI - YENİ -->
+    <!-- EK DEPOZİTO BORCU UYARISI - Buton OLMADAN -->
     {% if ek_depozito_borcu > 0 %}
     <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin-bottom: 20px; border-left: 4px solid #ffc107;">
         <h4 style="margin-top: 0; color: #856404;">⚠️ Ek Depozito Borcunuz Bulunuyor!</h4>
         <p>
             <strong>{{ ek_depozito_borcu|floatformat:2 }} TL</strong> ek depozito borcunuz var.
-            Bu tutarı ödeyerek depozito bakiyenizi artırabilirsiniz.
+            Bu tutar, yönetim tarafından onaylandıktan sonra depozito bakiyenize eklenecektir.
         </p>
-        <a href="{% url 'portal:ek_depozito_ode' depozito.id %}" class="btn btn-warning" 
-           style="background: #ffc107; color: #212529; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-            💰 Ek Depozito Öde
-        </a>
+        <p style="font-size: 14px; color: #856404; margin-top: 5px;">
+            📌 Ödeme işlemi için yönetimle iletişime geçiniz.
+        </p>
     </div>
     {% endif %}
     
@@ -69,11 +74,13 @@
         <br>
         <strong style="color: #856404;">⚠️ Ek Depozito Borcu:</strong> 
         <span style="color: #dc3545; font-weight: bold;">{{ ek_depozito_borcu|floatformat:2 }} TL</span>
+        <span style="font-size: 12px; color: #6c757d;">(Ödeme bekleniyor)</span>
         {% endif %}
         {% if depozito.ek_depozito_odendi_mi and depozito.ek_depozito_tutari > 0 %}
         <br>
         <strong style="color: #28a745;">✅ Ödenen Ek Depozito:</strong> 
         <span style="color: #28a745; font-weight: bold;">{{ depozito.ek_depozito_tutari|floatformat:2 }} TL</span>
+        <span style="font-size: 12px; color: #6c757d;">(Ödeme onaylandı)</span>
         {% endif %}
     </div>
     
@@ -255,7 +262,8 @@
         <small>
             <strong>💰 Ek Depozito Nedir?</strong><br>
             Enflasyon farkı, acil durum fonu gibi nedenlerle yansıtılan ek teminattır. 
-            Ödenmesi gereken bir borçtur. Ödeme yapıldığında depozito bakiyenize eklenir.
+            Ödenmesi gereken bir borçtur. Ödeme işlemi yönetim tarafından onaylandığında 
+            depozito bakiyenize eklenir. Ödeme için yönetimle iletişime geçiniz.
         </small>
     </div>
 {% endif %}
@@ -273,8 +281,6 @@
     .badge-warning { background: #ffc107; color: #212529; }
     .btn { background: #28a745; color: white; padding: 8px 15px; text-decoration: none; border-radius: 5px; display: inline-block; }
     .btn:hover { background: #218838; }
-    .btn-warning { background: #ffc107; color: #212529; }
-    .btn-warning:hover { background: #e0a800; }
     
     /* Kart Stilleri */
     .card-container {
