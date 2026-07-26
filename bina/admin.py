@@ -3526,7 +3526,7 @@ class DepozitoAdmin(BaseSiteAdmin):
     
     # ========== TÜM DAİRELERE EK DEPOZİTO ==========
     def tum_dairelere_ek_depozito(self, request):
-        """Tüm dairelere ek depozito yansıt"""
+        """Tüm dairelere ek depozito yansıt (Muafiyet seçeneği ile)"""
         from .models import Daire, Depozito, DepozitoHareket
         from django.shortcuts import render, redirect
         from django.urls import reverse
@@ -3535,18 +3535,25 @@ class DepozitoAdmin(BaseSiteAdmin):
         if request.method == 'POST':
             tutar = float(request.POST.get('tutar', 0))
             aciklama = request.POST.get('aciklama', '')
+            muafiyet_uygula = request.POST.get('muafiyet_uygula') == 'on'  # Checkbox kontrolü
             
             if tutar <= 0:
                 self.message_user(request, '❌ Lütfen geçerli bir tutar girin!', level='ERROR')
                 return redirect('admin:bina_depozito_changelist')
             
             eklenen = 0
+            muaf_daireler = 0
             hatali = 0
             
-            # Tüm daireleri al (muaf olmayanlar)
-            daireler = Daire.objects.filter(isletme_giderlerinden_muaf=False)
+            # Tüm daireleri al
+            tum_daireler = Daire.objects.all()
             
-            for daire in daireler:
+            for daire in tum_daireler:
+                # Muafiyet kontrolü
+                if muafiyet_uygula and (daire.isletme_giderlerinden_muaf or daire.demirbas_giderlerinden_muaf):
+                    muaf_daireler += 1
+                    continue  # Bu daireyi atla
+                
                 try:
                     # Dairenin depozitosunu bul veya oluştur
                     depozito, created = Depozito.objects.get_or_create(
@@ -3579,11 +3586,14 @@ class DepozitoAdmin(BaseSiteAdmin):
                     hatali += 1
                     print(f"Hata: {e}")
             
-            self.message_user(
-                request, 
-                f'✅ {eklenen} daireye {tutar:.2f} TL ek depozito yansıtıldı!'
-                f'{" ⚠️ " + str(hatali) + " dairede hata oluştu!" if hatali > 0 else ""}'
-            )
+            # Sonuç mesajını oluştur
+            mesaj = f'✅ {eklenen} daireye {tutar:.2f} TL ek depozito yansıtıldı!'
+            if muaf_daireler > 0:
+                mesaj += f' ⚠️ {muaf_daireler} daire muaf olduğu için atlandı!'
+            if hatali > 0:
+                mesaj += f' ❌ {hatali} dairede hata oluştu!'
+            
+            self.message_user(request, mesaj)
             return redirect('admin:bina_depozito_changelist')
         
         # GET isteği - form göster
@@ -3596,7 +3606,7 @@ class DepozitoAdmin(BaseSiteAdmin):
     # ========== SEÇİLİ DAİRELERE EK DEPOZİTO ==========
     @admin.action(description='Seçili depozitolara ek depozito yansıt')
     def secili_depozitolara_ek_depozito(self, request, queryset):
-        """Seçili depozitolara ek depozito yansıt"""
+        """Seçili depozitolara ek depozito yansıt (Muafiyet seçeneği ile)"""
         from .models import Depozito, DepozitoHareket
         from django.shortcuts import render
         from django.http import HttpResponseRedirect
@@ -3605,13 +3615,21 @@ class DepozitoAdmin(BaseSiteAdmin):
         if request.POST.get('apply'):
             tutar = float(request.POST.get('tutar', 0))
             aciklama = request.POST.get('aciklama', '')
+            muafiyet_uygula = request.POST.get('muafiyet_uygula') == 'on'  # Checkbox kontrolü
             
             if tutar <= 0:
                 self.message_user(request, '❌ Lütfen geçerli bir tutar girin!', level='ERROR')
                 return HttpResponseRedirect(request.get_full_path())
             
             eklenen = 0
+            muaf_daireler = 0
+            
             for depozito in queryset:
+                # Muafiyet kontrolü
+                if muafiyet_uygula and (depozito.daire.isletme_giderlerinden_muaf or depozito.daire.demirbas_giderlerinden_muaf):
+                    muaf_daireler += 1
+                    continue  # Bu daireyi atla
+                
                 # Ek depozito tutarını güncelle
                 depozito.ek_depozito_tutari = float(depozito.ek_depozito_tutari) + tutar
                 depozito.ek_depozito_aciklama = aciklama
@@ -3629,10 +3647,11 @@ class DepozitoAdmin(BaseSiteAdmin):
                 )
                 eklenen += 1
             
-            self.message_user(
-                request, 
-                f'✅ {eklenen} depozitoya {tutar:.2f} TL ek depozito yansıtıldı!'
-            )
+            mesaj = f'✅ {eklenen} depozitoya {tutar:.2f} TL ek depozito yansıtıldı!'
+            if muaf_daireler > 0:
+                mesaj += f' ⚠️ {muaf_daireler} daire muaf olduğu için atlandı!'
+            
+            self.message_user(request, mesaj)
             return HttpResponseRedirect(request.get_full_path())
         
         # Form göster
