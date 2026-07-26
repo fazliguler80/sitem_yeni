@@ -3189,36 +3189,45 @@ class DepozitoAdmin(BaseSiteAdmin):
     
     # ========== GUNCEL BAKIYE ==========
     def guncel_bakiye(self, obj):
-        """Depozito güncel bakiyesini hesapla (ana + ek + hareketler)"""
+        """Depozito güncel bakiyesini hesapla (ana depozito + ödenen ek depozitolar + hareketler)"""
         from .models import DepozitoHareket
+        from decimal import Decimal
         
         try:
-            toplam = float(obj.tutar)
+            # Ana depozito ile başla
+            toplam = Decimal(str(obj.tutar))
             
-            # Ek depozitoyu ekle (eğer ödendiyse)
-            if obj.ek_depozito_odendi_mi:
-                toplam += float(obj.ek_depozito_tutari if obj.ek_depozito_tutari else 0)
+            # SADECE ÖDENMİŞ ek depozitoları ekle
+            # (Ödenmemiş olanlar borçtur, bakiyeye dahil edilmez)
+            if obj.ek_depozito_odendi_mi and obj.ek_depozito_tutari:
+                toplam += Decimal(str(obj.ek_depozito_tutari))
             
-            # Hareketleri ekle
+            # Hareketleri ekle (SADECE ekleme ve iade hareketleri)
+            # NOT: 'ek_depozito' tipindeki hareketleri EKLEME çünkü bunlar zaten 
+            # ek_depozito_tutari içinde sayıldı. Sadece ödeme hareketlerini ekle.
             hareketler = DepozitoHareket.objects.filter(depozito=obj)
             for h in hareketler:
-                if h.hareket_tipi in ['ekleme', 'ek_depozito']:
-                    toplam += float(h.tutar)
+                if h.hareket_tipi == 'ekleme':
+                    # Ödeme hareketleri - depozitoya eklenir
+                    toplam += Decimal(str(h.tutar))
                 elif h.hareket_tipi in ['cikarma', 'iade']:
-                    toplam -= float(h.tutar)
+                    # Çıkarma ve iade hareketleri - depozitodan düşülür
+                    toplam -= Decimal(str(h.tutar))
+                # 'ek_depozito' tipindeki hareketler ZATEN ek_depozito_tutari içinde sayıldı
+                # Bu yüzden onları tekrar ekleme!
             
-            # float'a çevir
-            toplam = float(toplam)
+            # float'a çevir ve formatla
+            toplam_float = float(toplam)
             
             # Renkli gösterim
-            if toplam > 0:
-                return format_html('<span style="color: #28a745; font-weight: bold;">{:.2f} TL</span>', toplam)
-            elif toplam < 0:
-                return format_html('<span style="color: #dc3545; font-weight: bold;">{:.2f} TL</span>', toplam)
+            if toplam_float > 0:
+                return format_html('<span style="color: #28a745; font-weight: bold;">{:.2f} TL</span>', toplam_float)
+            elif toplam_float < 0:
+                return format_html('<span style="color: #dc3545; font-weight: bold;">{:.2f} TL</span>', toplam_float)
             else:
-                return format_html('<span style="color: #6c757d;">{:.2f} TL</span>', toplam)
+                return format_html('<span style="color: #6c757d;">{:.2f} TL</span>', toplam_float)
         except Exception as e:
-            return format_html('<span style="color: #dc3545;">Hata</span>')
+            return format_html('<span style="color: #dc3545;">Hata: {}</span>', str(e))
     guncel_bakiye.short_description = "Güncel Bakiye"
     
     # ========== HAREKET EKLE BUTONU ==========
@@ -3450,7 +3459,7 @@ class DepozitoAdmin(BaseSiteAdmin):
     
     # ========== EK DEPOZİTO ÖDEME ==========
     def ek_depozito_ode(self, request, depozito_id):
-        """Ek depozito ödeme işlemi"""
+        """Ek depozito ödeme işlemi - Ödeme yapılınca depozitoya ekle"""
         from .models import Depozito, DepozitoHareket, BankaHareket, Banka
         from django.shortcuts import get_object_or_404, redirect, render
         from django.urls import reverse
@@ -3472,7 +3481,7 @@ class DepozitoAdmin(BaseSiteAdmin):
             if odeme_tutari > ek_tutar:
                 self.message_user(
                     request, 
-                    f'❌ Ödenecek tutar ({odeme_tutari:.2f} TL), ek depozito tutarından ({ek_tutar:.2f} TL) büyük olamaz!',
+                    f'❌ Ödenecek tutar ({odeme_tutari:.2f} TL), ek depozito borcundan ({ek_tutar:.2f} TL) büyük olamaz!',
                     level='ERROR'
                 )
                 return redirect('admin:bina_depozito_change', depozito_id)
@@ -3488,11 +3497,10 @@ class DepozitoAdmin(BaseSiteAdmin):
                     aciklama=f"Ek depozito ödemesi - {depozito.daire}",
                     kisi=depozito.kisi
                 )
-                # Decimal ile toplama
                 ana_hesap.guncel_bakiye = Decimal(str(ana_hesap.guncel_bakiye)) + odeme_tutari
                 ana_hesap.save()
             
-            # Depozitoyu güncelle
+            # Ek depozito borcunu azalt
             kalan_ek_depozito = ek_tutar - odeme_tutari
             depozito.ek_depozito_tutari = kalan_ek_depozito
             
@@ -3502,10 +3510,10 @@ class DepozitoAdmin(BaseSiteAdmin):
             
             depozito.save()
             
-            # Depozito hareketi oluştur (ödeme işlemi)
+            # Depozito HAREKETİ oluştur - Ödeme depozitoya EKLENİR
             DepozitoHareket.objects.create(
                 depozito=depozito,
-                hareket_tipi='ekleme',
+                hareket_tipi='ekleme',  # Ödeme depozitoya eklenir
                 tutar=odeme_tutari,
                 tarih=odeme_tarihi,
                 aciklama=f"Ek depozito ödemesi - {odeme_tutari:.2f} TL",
@@ -3515,7 +3523,7 @@ class DepozitoAdmin(BaseSiteAdmin):
             self.message_user(
                 request, 
                 f'✅ {odeme_tutari:.2f} TL ek depozito ödemesi alındı! '
-                f'Kalan: {kalan_ek_depozito:.2f} TL'
+                f'Kalan ek depozito borcu: {kalan_ek_depozito:.2f} TL'
             )
             return redirect('admin:bina_depozito_change', depozito_id)
         
@@ -3529,16 +3537,17 @@ class DepozitoAdmin(BaseSiteAdmin):
     
     # ========== TÜM DAİRELERE EK DEPOZİTO ==========
     def tum_dairelere_ek_depozito(self, request):
-        """Tüm dairelere ek depozito yansıt (Muafiyet seçeneği ile)"""
+        """Tüm dairelere ek depozito yansıt (Sadece borç olarak göster, hareket oluşturma)"""
         from .models import Daire, Depozito, DepozitoHareket
         from django.shortcuts import render, redirect
         from django.urls import reverse
         from datetime import date
+        from decimal import Decimal
         
         if request.method == 'POST':
-            tutar = float(request.POST.get('tutar', 0))
+            tutar = Decimal(str(request.POST.get('tutar', 0)))
             aciklama = request.POST.get('aciklama', '')
-            muafiyet_uygula = request.POST.get('muafiyet_uygula') == 'on'  # Checkbox kontrolü
+            muafiyet_uygula = request.POST.get('muafiyet_uygula') == 'on'
             
             if tutar <= 0:
                 self.message_user(request, '❌ Lütfen geçerli bir tutar girin!', level='ERROR')
@@ -3548,14 +3557,13 @@ class DepozitoAdmin(BaseSiteAdmin):
             muaf_daireler = 0
             hatali = 0
             
-            # Tüm daireleri al
             tum_daireler = Daire.objects.all()
             
             for daire in tum_daireler:
                 # Muafiyet kontrolü
                 if muafiyet_uygula and (daire.isletme_giderlerinden_muaf or daire.demirbas_giderlerinden_muaf):
                     muaf_daireler += 1
-                    continue  # Bu daireyi atla
+                    continue
                 
                 try:
                     # Dairenin depozitosunu bul veya oluştur
@@ -3569,28 +3577,19 @@ class DepozitoAdmin(BaseSiteAdmin):
                         }
                     )
                     
-                    # Ek depozito tutarını güncelle
-                    depozito.ek_depozito_tutari = float(depozito.ek_depozito_tutari) + tutar
+                    # SADECE ek_depozito_tutari'ni güncelle - HAREKET OLUŞTURMA!
+                    depozito.ek_depozito_tutari = Decimal(str(depozito.ek_depozito_tutari)) + tutar
                     depozito.ek_depozito_aciklama = aciklama
-                    depozito.ek_depozito_odendi_mi = False
+                    depozito.ek_depozito_odendi_mi = False  # Henüz ödenmedi
                     depozito.save()
                     
-                    # Depozito hareketi oluştur
-                    DepozitoHareket.objects.create(
-                        depozito=depozito,
-                        hareket_tipi='ek_depozito',
-                        tutar=tutar,
-                        tarih=date.today(),
-                        aciklama=f"Ek depozito: {aciklama}" if aciklama else "Ek depozito yansıtıldı",
-                        ek_depozito_odendi_mi=False
-                    )
+                    # HAREKET OLUŞTURMA - Sadece borç olarak göster
                     eklenen += 1
                 except Exception as e:
                     hatali += 1
                     print(f"Hata: {e}")
             
-            # Sonuç mesajını oluştur
-            mesaj = f'✅ {eklenen} daireye {tutar:.2f} TL ek depozito yansıtıldı!'
+            mesaj = f'✅ {eklenen} daireye {tutar:.2f} TL ek depozito borcu yansıtıldı!'
             if muaf_daireler > 0:
                 mesaj += f' ⚠️ {muaf_daireler} daire muaf olduğu için atlandı!'
             if hatali > 0:
@@ -3601,7 +3600,7 @@ class DepozitoAdmin(BaseSiteAdmin):
         
         # GET isteği - form göster
         return render(request, 'admin/ek_depozito_form.html', {
-            'title': 'Tüm Dairelere Ek Depozito Yansıt',
+            'title': 'Tüm Dairelere Ek Depozito Borcu Yansıt',
             'islem': 'tum',
             'site_header': self.admin_site.site_header,
         })
