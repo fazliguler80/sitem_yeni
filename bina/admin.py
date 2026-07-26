@@ -880,7 +880,6 @@ class AidatAdmin(TarihFiltresiMixin, BaseSiteAdmin):
         from bina.models import Aidat
         from django.shortcuts import redirect, render
         from django.urls import reverse
-        from django import forms
         from datetime import date
         
         if request.method == 'POST':
@@ -913,18 +912,29 @@ class AidatAdmin(TarihFiltresiMixin, BaseSiteAdmin):
             return redirect('admin:bina_aidat_changelist')
         
         # GET isteği - form göster
-        class SilForm(forms.Form):
-            ay = forms.ChoiceField(
-                choices=[(i, i) for i in range(1, 13)], 
-                initial=date.today().month,
-                label='Ay'
-            )
-            yil = forms.IntegerField(initial=date.today().year, label='Yıl')
+        bugun = date.today()
+        
+        aylar = [
+            {'value': 1, 'label': 'Ocak'},
+            {'value': 2, 'label': 'Şubat'},
+            {'value': 3, 'label': 'Mart'},
+            {'value': 4, 'label': 'Nisan'},
+            {'value': 5, 'label': 'Mayıs'},
+            {'value': 6, 'label': 'Haziran'},
+            {'value': 7, 'label': 'Temmuz'},
+            {'value': 8, 'label': 'Ağustos'},
+            {'value': 9, 'label': 'Eylül'},
+            {'value': 10, 'label': 'Ekim'},
+            {'value': 11, 'label': 'Kasım'},
+            {'value': 12, 'label': 'Aralık'},
+        ]
         
         return render(request, 'admin/aidat_ozel_ay_form.html', {
             'title': 'Özel Ay Sabit Aidatları Sil',
-            'form': SilForm(),
             'islem': 'sil',
+            'aylar': aylar,
+            'secili_ay': bugun.month,
+            'secili_yil': bugun.year,
             'site_header': self.admin_site.site_header,
         })
 

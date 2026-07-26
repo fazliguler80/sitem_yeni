@@ -34,24 +34,19 @@
             <div class="form-row" style="padding: 15px 0;">
                 <div style="display: inline-block; margin-right: 30px;">
                     <label for="id_ay" style="font-weight: bold;">Ay:</label>
-                    <select name="ay" id="id_ay" style="padding: 8px 15px; margin-left: 10px; border: 1px solid #ced4da; border-radius: 4px;">
-                        {% for i in "123456789101112"|make_list %}
-                            <option value="{{ i }}" {% if i|add:0 == 7 %}selected{% endif %}>
-                                {% if i == '1' %}Ocak
-                                {% elif i == '2' %}Şubat
-                                {% elif i == '3' %}Mart
-                                {% elif i == '4' %}Nisan
-                                {% elif i == '5' %}Mayıs
-                                {% elif i == '6' %}Haziran
-                                {% elif i == '7' %}Temmuz
-                                {% elif i == '8' %}Ağustos
-                                {% elif i == '9' %}Eylül
-                                {% elif i == '10' %}Ekim
-                                {% elif i == '11' %}Kasım
-                                {% elif i == '12' %}Aralık
-                                {% endif %}
-                            </option>
-                        {% endfor %}
+                    <select name="ay" id="id_ay" style="padding: 8px 15px; margin-left: 10px; border: 1px solid #ced4da; border-radius: 4px; min-width: 150px;">
+                        <option value="1">Ocak</option>
+                        <option value="2">Şubat</option>
+                        <option value="3">Mart</option>
+                        <option value="4">Nisan</option>
+                        <option value="5">Mayıs</option>
+                        <option value="6">Haziran</option>
+                        <option value="7" selected>Temmuz</option>
+                        <option value="8">Ağustos</option>
+                        <option value="9">Eylül</option>
+                        <option value="10">Ekim</option>
+                        <option value="11">Kasım</option>
+                        <option value="12">Aralık</option>
                     </select>
                 </div>
                 
