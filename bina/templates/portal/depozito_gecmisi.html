@@ -4,14 +4,12 @@
 <h2>💰 Depozito Geçmişim</h2>
 <p>Daire: {{ daire.blok.blok_adi }}-{{ daire.daire_no }}</p>
 
-<!-- ========== DEBUG KODU - BURAYA EKLEYİN ========== -->
-<div style="background: #f8f9fa; padding: 10px; border: 1px solid #ddd; margin-bottom: 10px; border-radius: 5px;">
-    <small>
-        <strong>🔍 Debug Bilgileri:</strong><br>
-        ek_depozito_tutari: {{ depozito.ek_depozito_tutari }}<br>
-        ek_depozito_odendi_mi: {{ depozito.ek_depozito_odendi_mi }}<br>
-        ek_depozito_borcu: {{ ek_depozito_borcu }}
-    </small>
+<!-- ========== DEBUG KODU ========== -->
+<div style="background: #f8f9fa; padding: 15px; border: 2px solid #ff9800; margin-bottom: 10px; border-radius: 5px;">
+    <strong>🔍 Debug Bilgileri:</strong><br>
+    ek_depozito_tutari: {{ depozito.ek_depozito_tutari }}<br>
+    ek_depozito_odendi_mi: {{ depozito.ek_depozito_odendi_mi }}<br>
+    <strong style="color: #dc3545;">ek_depozito_borcu: {{ ek_depozito_borcu }}</strong>
 </div>
 <!-- ========== DEBUG SONU ========== -->
 

@@ -73,45 +73,45 @@ def portal_depozito_gecmisi(request):
             'gecmis_hareketler': [],
             'toplam_depozito': 0,
             'guncel_bakiye': 0,
-            'ek_depozito_borcu': 0,
+            'ek_depozito_borcu': 0,  # EKLENDİ
         }
         return render(request, 'portal/depozito_gecmisi.html', context)
     
     # ========== EK DEPOZİTO BORCU ==========
-    # Direkt model alanlarından oku
-    ek_depozito_tutari = depozito.ek_depozito_tutari or Decimal('0.00')
-    ek_depozito_odendi_mi = depozito.ek_depozito_odendi_mi
+    # Doğrudan model alanlarından oku
+    ek_tutar = float(depozito.ek_depozito_tutari) if depozito.ek_depozito_tutari else 0
+    ek_odendi = depozito.ek_depozito_odendi_mi
     
     # Borç hesapla: Sadece ödenmemiş olanlar borçtur
-    if ek_depozito_odendi_mi:
-        ek_depozito_borcu = Decimal('0.00')
+    if ek_odendi:
+        ek_depozito_borcu = 0
     else:
-        ek_depozito_borcu = Decimal(str(ek_depozito_tutari))
+        ek_depozito_borcu = ek_tutar
     
-    # ===== DEBUG - Konsola yazdır =====
+    # ===== DEBUG =====
     print("=" * 50)
     print("🔍 DEPOZITO BORÇ BİLGİSİ")
     print(f"Daire: {daire}")
-    print(f"ek_depozito_tutari: {ek_depozito_tutari}")
-    print(f"ek_depozito_odendi_mi: {ek_depozito_odendi_mi}")
+    print(f"ek_depozito_tutari: {ek_tutar}")
+    print(f"ek_depozito_odendi_mi: {ek_odendi}")
     print(f"ek_depozito_borcu: {ek_depozito_borcu}")
     print("=" * 50)
     
     # ========== GUNCEL BAKIYE ==========
-    guncel_bakiye = Decimal(str(depozito.tutar))
+    guncel_bakiye = float(depozito.tutar)
     
     # Ödenmiş ek depozitoyu ekle
-    if depozito.ek_depozito_odendi_mi and depozito.ek_depozito_tutari:
-        guncel_bakiye += Decimal(str(depozito.ek_depozito_tutari))
+    if ek_odendi and ek_tutar > 0:
+        guncel_bakiye += ek_tutar
     
     # İade edilen tutarı düş
     if depozito.iade_tutari:
-        guncel_bakiye -= Decimal(str(depozito.iade_tutari))
+        guncel_bakiye -= float(depozito.iade_tutari)
     
     # ========== TOPLAM DEPOZITO ==========
-    toplam_depozito = Decimal(str(depozito.tutar))
-    if depozito.ek_depozito_odendi_mi and depozito.ek_depozito_tutari:
-        toplam_depozito += Decimal(str(depozito.ek_depozito_tutari))
+    toplam_depozito = float(depozito.tutar)
+    if ek_odendi and ek_tutar > 0:
+        toplam_depozito += ek_tutar
     
     # ========== HAREKETLER ==========
     hareketler = depozito.hareketler.all().order_by('-tarih', '-id')
@@ -154,11 +154,15 @@ def portal_depozito_gecmisi(request):
         'daire': daire,
         'depozito': depozito,
         'depozito_var': True,
-        'toplam_depozito': float(toplam_depozito),
-        'guncel_bakiye': float(guncel_bakiye),
-        'ek_depozito_borcu': float(ek_depozito_borcu),  # BURASI ÇOK ÖNEMLİ
+        'toplam_depozito': toplam_depozito,
+        'guncel_bakiye': guncel_bakiye,
+        'ek_depozito_borcu': ek_depozito_borcu,  # BURASI ÇOK ÖNEMLİ!
         'gecmis_hareketler': hareket_listesi,
     }
+    
+    # DEBUG - Context'i yazdır
+    print(f"📊 Context: {context.keys()}")
+    print(f"   ek_depozito_borcu: {context['ek_depozito_borcu']}")
     
     return render(request, 'portal/depozito_gecmisi.html', context)
 
