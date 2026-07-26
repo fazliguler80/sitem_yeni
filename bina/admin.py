@@ -805,12 +805,15 @@ class AidatAdmin(TarihFiltresiMixin, BaseSiteAdmin):
             'opts': self.model._meta,
         })
     
-    # ========== 3. SABİT AİDAT SİL (BU AY) ==========
+    # ========== 3. SABİT AİDAT SİL (BU AY) - DÜZELTİLDİ ==========
     @admin.action(description='Bu ayın sabit aidatlarını sil (Tüm daireler)')
     def sabit_aidat_sil_bu_ay(self, request, queryset):
         """Bu ayın tüm sabit aidatlarını sil"""
         from datetime import date
         from bina.models import Aidat
+        from django.shortcuts import render
+        from django.http import HttpResponseRedirect
+        from django.urls import reverse
         
         ay = date.today().month
         yil = date.today().year
@@ -833,32 +836,74 @@ class AidatAdmin(TarihFiltresiMixin, BaseSiteAdmin):
             )
             return
         
-        # Silme onayı iste
-        if not request.POST.get('confirm_delete'):
-            from django.shortcuts import render
-            return render(request, 'admin/aidat_sil_onay.html', {
-                'title': 'Sabit Aidatları Sil',
-                'ay': ay,
-                'yil': yil,
-                'sayi': sayi,
-                'site_header': self.admin_site.site_header,
-                'opts': self.model._meta,
-                'action': 'sabit_aidat_sil_bu_ay',
-            })
+        # Eğer onay sayfasından geliyorsa sil
+        if request.POST.get('confirm_delete') == '1':
+            try:
+                silinen_sayi = silinecek.count()
+                silinecek.delete()
+                self.message_user(request, f'✅ {silinen_sayi} adet {ay}/{yil} sabit aidatı silindi!')
+            except Exception as e:
+                self.message_user(request, f'❌ Silme hatası: {str(e)}', level='ERROR')
+            return HttpResponseRedirect(reverse('admin:bina_aidat_changelist'))
         
-        # Sil
-        silinecek.delete()
-        self.message_user(request, f'✅ {sayi} adet {ay}/{yil} sabit aidatı silindi!')
+        # Onay sayfasını göster
+        return render(request, 'admin/aidat_sil_onay.html', {
+            'title': 'Sabit Aidatları Sil',
+            'ay': ay,
+            'yil': yil,
+            'sayi': sayi,
+            'site_header': self.admin_site.site_header,
+            'opts': self.model._meta,
+            'action_url': request.path,
+            'cancel_url': reverse('admin:bina_aidat_changelist'),
+        })
     
-    # ========== 4. SABİT AİDAT SİL (ÖZEL AY/YIL) ==========
+    # ========== 4. SABİT AİDAT SİL (ÖZEL AY/YIL) - DÜZELTİLDİ ==========
     @admin.action(description='Seçili dairelerin sabit aidatlarını sil (Özel Ay/Yıl)')
     def sabit_aidat_sil_ozel(self, request, queryset):
         """Seçili dairelerin belirli ay/yıl sabit aidatlarını sil"""
         from bina.models import Aidat
         from django.shortcuts import render
         from django.http import HttpResponseRedirect
+        from django.urls import reverse
         from django import forms
         from datetime import date
+        
+        if request.POST.get('apply') and request.POST.get('confirm_delete') == '1':
+            ay = int(request.POST.get('ay'))
+            yil = int(request.POST.get('yil'))
+            
+            # Seçili aidatların dairelerini bul
+            daire_ids = queryset.values_list('daire_id', flat=True).distinct()
+            silinecek = Aidat.objects.filter(
+                daire__id__in=daire_ids,
+                ay=ay,
+                yil=yil,
+                aidat_tipi='sabit'
+            )
+            sayi = silinecek.count()
+            
+            if sayi == 0:
+                self.message_user(request, f'⚠️ {ay}/{yil} için seçili dairelerde sabit aidat bulunamadı!', level='WARNING')
+                return HttpResponseRedirect(request.get_full_path())
+            
+            # Ödeme yapılmış olanları kontrol et
+            odenmis = silinecek.filter(odeme_yapildi_mi=True)
+            if odenmis.exists():
+                self.message_user(
+                    request, 
+                    f'❌ {odenmis.count()} adet ödenmiş aidat var! Önce ödemeleri iptal edin.',
+                    level='ERROR'
+                )
+                return HttpResponseRedirect(request.get_full_path())
+            
+            try:
+                silinecek.delete()
+                self.message_user(request, f'✅ {sayi} adet {ay}/{yil} sabit aidatı silindi!')
+            except Exception as e:
+                self.message_user(request, f'❌ Silme hatası: {str(e)}', level='ERROR')
+            
+            return HttpResponseRedirect(reverse('admin:bina_aidat_changelist'))
         
         if request.POST.get('apply'):
             ay = int(request.POST.get('ay'))
@@ -888,10 +933,18 @@ class AidatAdmin(TarihFiltresiMixin, BaseSiteAdmin):
                 )
                 return HttpResponseRedirect(request.get_full_path())
             
-            # Sil
-            silinecek.delete()
-            self.message_user(request, f'✅ {sayi} adet {ay}/{yil} sabit aidatı silindi!')
-            return HttpResponseRedirect(request.get_full_path())
+            # Onay sayfasını göster
+            return render(request, 'admin/aidat_sil_onay_ozel.html', {
+                'title': 'Seçili Dairelerin Sabit Aidatlarını Sil',
+                'ay': ay,
+                'yil': yil,
+                'sayi': sayi,
+                'queryset': queryset,
+                'site_header': self.admin_site.site_header,
+                'opts': self.model._meta,
+                'action_url': request.path,
+                'cancel_url': reverse('admin:bina_aidat_changelist'),
+            })
         
         # Form göster
         class SilForm(forms.Form):
