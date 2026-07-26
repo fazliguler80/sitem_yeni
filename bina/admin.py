@@ -3151,11 +3151,115 @@ class GiderAdmin(TarihFiltresiMixin, BaseSiteAdmin):
     
         
 class DepozitoAdmin(BaseSiteAdmin):
-    list_display = ('daire', 'kisi', 'tutar', 'ek_depozito_tutari', 'alinma_tarihi', 'durum', 'guncel_bakiye', 'durum_goster', 'hareket_ekle_button')
+    list_display = ('daire', 'kisi', 'tutar', 'ek_depozito_tutari_goster', 'ek_depozito_tutari', 'alinma_tarihi', 'durum', 'guncel_bakiye', 'durum_goster', 'hareket_ekle_button')
     list_filter = ('durum', 'alinma_tarihi', 'ek_depozito_odendi_mi')
     search_fields = ('daire__blok__blok_adi', 'daire__daire_no', 'kisi__ad_soyad')
     readonly_fields = ('guncel_bakiye', 'ek_depozito_tutari', 'ek_depozito_odendi_mi', 'ek_depozito_odeme_tarihi')
     
+    # ========== EK DEPOZITO TUTARI GOSTER ==========
+    def ek_depozito_tutari_goster(self, obj):
+        """Ek depozito tutarını göster"""
+        try:
+            tutar = float(obj.ek_depozito_tutari)
+            if tutar > 0:
+                return format_html(
+                    '<span style="color: #17a2b8; font-weight: bold;">{:.2f} TL</span>',
+                    tutar
+                )
+        except:
+            pass
+        return format_html('<span style="color: #6c757d;">-</span>')
+    ek_depozito_tutari_goster.short_description = 'Ek Depozito'
+    
+    # ========== DURUM GOSTER ==========
+    def durum_goster(self, obj):
+        """Ek depozito durumunu göster"""
+        try:
+            if float(obj.ek_depozito_tutari) > 0:
+                if obj.ek_depozito_odendi_mi:
+                    return format_html('<span style="color: #28a745;">✅ Ek Depozito Ödendi</span>')
+                else:
+                    return format_html('<span style="color: #ff9800;">⚠️ Ek Depozito Bekliyor: {} TL</span>', obj.ek_depozito_tutari)
+        except:
+            pass
+        return format_html('<span style="color: #6c757d;">➖ Ek Depozito Yok</span>')
+    durum_goster.short_description = 'Ek Depozito Durumu'
+    
+    # ========== GUNCEL BAKIYE ==========
+    def guncel_bakiye(self, obj):
+        """Depozito güncel bakiyesini hesapla (ana + ek + hareketler)"""
+        from .models import DepozitoHareket
+        
+        try:
+            toplam = float(obj.tutar)
+            
+            # Ek depozitoyu ekle (eğer ödendiyse)
+            if obj.ek_depozito_odendi_mi:
+                toplam += float(obj.ek_depozito_tutari if obj.ek_depozito_tutari else 0)
+            
+            # Hareketleri ekle
+            hareketler = DepozitoHareket.objects.filter(depozito=obj)
+            for h in hareketler:
+                if h.hareket_tipi in ['ekleme', 'ek_depozito']:
+                    toplam += float(h.tutar)
+                elif h.hareket_tipi in ['cikarma', 'iade']:
+                    toplam -= float(h.tutar)
+            
+            # float'a çevir
+            toplam = float(toplam)
+            
+            # Renkli gösterim
+            if toplam > 0:
+                return format_html('<span style="color: #28a745; font-weight: bold;">{:.2f} TL</span>', toplam)
+            elif toplam < 0:
+                return format_html('<span style="color: #dc3545; font-weight: bold;">{:.2f} TL</span>', toplam)
+            else:
+                return format_html('<span style="color: #6c757d;">{:.2f} TL</span>', toplam)
+        except Exception as e:
+            return format_html('<span style="color: #dc3545;">Hata</span>')
+    guncel_bakiye.short_description = "Güncel Bakiye"
+    
+    # ========== HAREKET EKLE BUTONU ==========
+    def hareket_ekle_button(self, obj):
+        from django.utils.html import format_html
+        from django.urls import reverse
+        url = reverse('admin:depozito_hareket_ekle', args=[obj.id])
+        ek_depozito_url = reverse('admin:ek_depozito_ode', args=[obj.id])
+        
+        buttons = f'<a href="{url}" style="background:#28a745; color:white; padding:5px 10px; border-radius:3px; text-decoration:none; margin-right:5px;">➕ Hareket</a>'
+        
+        try:
+            if float(obj.ek_depozito_tutari) > 0 and not obj.ek_depozito_odendi_mi:
+                buttons += f' <a href="{ek_depozito_url}" style="background:#17a2b8; color:white; padding:5px 10px; border-radius:3px; text-decoration:none;">💰 Ek Depozito Öde</a>'
+        except:
+            pass
+        
+        return format_html(buttons)
+    hareket_ekle_button.short_description = 'İşlemler'
+    hareket_ekle_button.allow_tags = True
+
+    fieldsets = (
+        ('Depozito Bilgileri', {
+            'fields': ('daire', 'kisi', 'tutar', 'alinma_tarihi', 'durum', 'banka')
+        }),
+        ('Ek Depozito Bilgileri', {
+            'fields': ('ek_depozito_tutari', 'ek_depozito_odendi_mi', 'ek_depozito_odeme_tarihi', 'ek_depozito_aciklama'),
+            'description': 'Dairelere yansıtılan ek depozito bilgileri',
+            'classes': ('wide',)
+        }),
+        ('İade Bilgileri', {
+            'fields': ('iade_tarihi', 'iade_tutari'),
+            'classes': ('collapse',)
+        }),
+        ('Açıklama', {
+            'fields': ('aciklama',)
+        }),
+        ('Güncel Bakiye', {
+            'fields': ('guncel_bakiye',),
+            'classes': ('collapse',)
+        }),
+    )
+
     def durum_goster(self, obj):
         """Ek depozito durumunu göster"""
         if obj.ek_depozito_tutari > 0:
@@ -3206,6 +3310,7 @@ class DepozitoAdmin(BaseSiteAdmin):
     def guncel_bakiye(self, obj):
         """Depozito güncel bakiyesini hesapla (ana + ek + hareketler)"""
         from .models import DepozitoHareket
+        
         toplam = float(obj.tutar)
         
         # Ek depozitoyu ekle (eğer ödendiyse)
@@ -3219,6 +3324,9 @@ class DepozitoAdmin(BaseSiteAdmin):
                 toplam += float(h.tutar)
             elif h.hareket_tipi in ['cikarma', 'iade']:
                 toplam -= float(h.tutar)
+        
+        # float'a çevir ve formatla
+        toplam = float(toplam)
         
         # Renkli gösterim
         if toplam > 0:
