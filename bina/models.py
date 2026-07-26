@@ -1335,7 +1335,7 @@ class Depozito(models.Model):
     ]
     
     daire = models.ForeignKey(Daire, on_delete=models.CASCADE, verbose_name="Daire", related_name='depozitolar')
-    kisi = models.ForeignKey(Kisi, on_delete=models.CASCADE, verbose_name="Depozito Veren")  # limit_choices_to kaldırıldı
+    kisi = models.ForeignKey(Kisi, on_delete=models.CASCADE, verbose_name="Depozito Veren")
     tutar = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Depozito Tutarı (TL)")
     alinma_tarihi = models.DateField(default=date.today, verbose_name="Alınma Tarihi")
     durum = models.CharField(max_length=20, choices=DURUM, default='alindi', verbose_name="Durum")
@@ -1346,14 +1346,63 @@ class Depozito(models.Model):
     # Hangi hesaba yatırıldığı
     banka = models.ForeignKey('Banka', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Yatırılan Hesap")
     
+    # ========== YENİ EK DEPOZİTO ALANLARI ==========
+    ek_depozito_tutari = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=0, 
+        verbose_name="Ek Depozito Tutarı (TL)",
+        help_text="Dairelere yansıtılan ek depozito tutarı"
+    )
+    ek_depozito_odendi_mi = models.BooleanField(
+        default=False, 
+        verbose_name="Ek Depozito Ödendi mi?",
+        help_text="Ek depozito ödendi mi?"
+    )
+    ek_depozito_odeme_tarihi = models.DateField(
+        null=True, 
+        blank=True, 
+        verbose_name="Ek Depozito Ödeme Tarihi",
+        help_text="Ek depozito ödeme tarihi"
+    )
+    ek_depozito_aciklama = models.TextField(
+        blank=True, 
+        null=True, 
+        verbose_name="Ek Depozito Açıklaması",
+        help_text="Ek depozito açıklaması"
+    )
+    
     def kalan_bakiye(self):
-        """Kalan depozito miktarı"""
+        """Kalan depozito miktarı (ana depozito)"""
         if self.durum == 'alindi':
             return float(self.tutar)
         return 0
     
+    def guncel_bakiye(self):
+        """Güncel depozito bakiyesini hesapla (ana + ek - iadeler)"""
+        from .models import DepozitoHareket
+        
+        toplam = float(self.tutar)
+        
+        # Ek depozitoyu ekle (eğer ödendiyse)
+        if self.ek_depozito_odendi_mi:
+            toplam += float(self.ek_depozito_tutari)
+        
+        # Depozito hareketlerini ekle
+        hareketler = DepozitoHareket.objects.filter(depozito=self)
+        for h in hareketler:
+            if h.hareket_tipi in ['ekleme', 'ek_depozito']:
+                toplam += float(h.tutar)
+            elif h.hareket_tipi in ['cikarma', 'iade']:
+                toplam -= float(h.tutar)
+        
+        return toplam
+    
     def __str__(self):
-        return f"{self.daire} - {self.kisi} - {self.tutar} TL ({self.get_durum_display()})"
+        ek_bilgi = ""
+        if self.ek_depozito_tutari > 0:
+            ek_bilgi = f" (+{self.ek_depozito_tutari} TL ek)"
+        return f"{self.daire} - {self.kisi} - {self.tutar} TL{ek_bilgi} ({self.get_durum_display()})"
     
     class Meta:
         verbose_name = "Depozito"
@@ -1368,6 +1417,7 @@ class DepozitoHareket(models.Model):
         ('ekleme', 'Ekleme (Fazla Ödeme)'),
         ('cikarma', 'Çıkarma (Mahsup)'),
         ('iade', 'İade'),
+        ('ek_depozito', 'Ek Depozito'),  # YENİ EKLENDİ
     ]
     
     depozito = models.ForeignKey(Depozito, on_delete=models.CASCADE, verbose_name="Depozito", related_name='hareketler')
@@ -1379,7 +1429,7 @@ class DepozitoHareket(models.Model):
     # Bağlı olduğu gider (yakıt hesaplamasındaki yuvarlama için)
     gider = models.ForeignKey('Gider', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Bağlı Gider")
     
-    # ========== YENİ EKLENEN ALAN ==========
+    # Bağlı olduğu aidat
     aidat = models.ForeignKey(
         'Aidat', 
         on_delete=models.SET_NULL, 
@@ -1387,6 +1437,13 @@ class DepozitoHareket(models.Model):
         blank=True, 
         verbose_name="Bağlı Aidat",
         related_name='depozito_hareketleri'
+    )
+    
+    # YENİ ALAN - Ek depozito ödeme durumu
+    ek_depozito_odendi_mi = models.BooleanField(
+        default=False, 
+        verbose_name="Ek Depozito Ödendi mi?",
+        help_text="Bu ek depozito ödendi mi?"
     )
     
     def __str__(self):

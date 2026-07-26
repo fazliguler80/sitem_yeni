@@ -3151,22 +3151,44 @@ class GiderAdmin(TarihFiltresiMixin, BaseSiteAdmin):
     
         
 class DepozitoAdmin(BaseSiteAdmin):
-    list_display = ('daire', 'kisi', 'tutar', 'alinma_tarihi', 'durum', 'guncel_bakiye', 'hareket_ekle_button')
-    list_filter = ('durum', 'alinma_tarihi')
+    list_display = ('daire', 'kisi', 'tutar', 'ek_depozito_tutari', 'alinma_tarihi', 'durum', 'guncel_bakiye', 'durum_goster', 'hareket_ekle_button')
+    list_filter = ('durum', 'alinma_tarihi', 'ek_depozito_odendi_mi')
     search_fields = ('daire__blok__blok_adi', 'daire__daire_no', 'kisi__ad_soyad')
-    readonly_fields = ('guncel_bakiye',)
+    readonly_fields = ('guncel_bakiye', 'ek_depozito_tutari', 'ek_depozito_odendi_mi', 'ek_depozito_odeme_tarihi')
+    
+    def durum_goster(self, obj):
+        """Ek depozito durumunu göster"""
+        if obj.ek_depozito_tutari > 0:
+            if obj.ek_depozito_odendi_mi:
+                return format_html('<span style="color: #28a745;">✅ Ek Depozito Ödendi</span>')
+            else:
+                return format_html('<span style="color: #ff9800;">⚠️ Ek Depozito Bekliyor: {} TL</span>', obj.ek_depozito_tutari)
+        return format_html('<span style="color: #6c757d;">➖ Ek Depozito Yok</span>')
+    durum_goster.short_description = 'Ek Depozito Durumu'
     
     def hareket_ekle_button(self, obj):
         from django.utils.html import format_html
         from django.urls import reverse
         url = reverse('admin:depozito_hareket_ekle', args=[obj.id])
-        return format_html('<a href="{}" style="background:#28a745; color:white; padding:5px 10px; border-radius:3px; text-decoration:none;">➕ Hareket Ekle</a>', url)
-    hareket_ekle_button.short_description = 'İşlem'
+        ek_depozito_url = reverse('admin:ek_depozito_ode', args=[obj.id])
+        
+        buttons = f'<a href="{url}" style="background:#28a745; color:white; padding:5px 10px; border-radius:3px; text-decoration:none; margin-right:5px;">➕ Hareket</a>'
+        
+        if obj.ek_depozito_tutari > 0 and not obj.ek_depozito_odendi_mi:
+            buttons += f' <a href="{ek_depozito_url}" style="background:#17a2b8; color:white; padding:5px 10px; border-radius:3px; text-decoration:none;">💰 Ek Depozito Öde</a>'
+        
+        return format_html(buttons)
+    hareket_ekle_button.short_description = 'İşlemler'
     hareket_ekle_button.allow_tags = True
 
     fieldsets = (
         ('Depozito Bilgileri', {
             'fields': ('daire', 'kisi', 'tutar', 'alinma_tarihi', 'durum', 'banka')
+        }),
+        ('Ek Depozito Bilgileri', {
+            'fields': ('ek_depozito_tutari', 'ek_depozito_odendi_mi', 'ek_depozito_odeme_tarihi', 'ek_depozito_aciklama'),
+            'description': 'Dairelere yansıtılan ek depozito bilgileri',
+            'classes': ('wide',)
         }),
         ('İade Bilgileri', {
             'fields': ('iade_tarihi', 'iade_tutari'),
@@ -3182,17 +3204,30 @@ class DepozitoAdmin(BaseSiteAdmin):
     )
     
     def guncel_bakiye(self, obj):
-        """Depozito güncel bakiyesini hesapla (ana + hareketler)"""
+        """Depozito güncel bakiyesini hesapla (ana + ek + hareketler)"""
         from .models import DepozitoHareket
         toplam = float(obj.tutar)
+        
+        # Ek depozitoyu ekle (eğer ödendiyse)
+        if obj.ek_depozito_odendi_mi:
+            toplam += float(obj.ek_depozito_tutari)
+        
+        # Hareketleri ekle
         hareketler = DepozitoHareket.objects.filter(depozito=obj)
         for h in hareketler:
-            if h.hareket_tipi == 'ekleme':
+            if h.hareket_tipi in ['ekleme', 'ek_depozito']:
                 toplam += float(h.tutar)
-            elif h.hareket_tipi == 'cikarma':
+            elif h.hareket_tipi in ['cikarma', 'iade']:
                 toplam -= float(h.tutar)
-        return f"{toplam:.2f} TL"
-    guncel_bakiye.short_description = "Güncel Bakiye (Hareketler Dahil)"
+        
+        # Renkli gösterim
+        if toplam > 0:
+            return format_html('<span style="color: #28a745; font-weight: bold;">{:.2f} TL</span>', toplam)
+        elif toplam < 0:
+            return format_html('<span style="color: #dc3545; font-weight: bold;">{:.2f} TL</span>', toplam)
+        else:
+            return format_html('<span style="color: #6c757d;">{:.2f} TL</span>', toplam)
+    guncel_bakiye.short_description = "Güncel Bakiye"
     
     def get_urls(self):
         from django.urls import path
@@ -3204,6 +3239,8 @@ class DepozitoAdmin(BaseSiteAdmin):
         urls = super().get_urls()
         custom_urls = [
             path('<int:depozito_id>/hareket-ekle/', self.admin_site.admin_view(self.depozito_hareket_ekle), name='depozito_hareket_ekle'),
+            path('<int:depozito_id>/ek-depozito-ode/', self.admin_site.admin_view(self.ek_depozito_ode), name='ek_depozito_ode'),
+            path('tum-dairelere-ek-depozito/', self.admin_site.admin_view(self.tum_dairelere_ek_depozito), name='tum_dairelere_ek_depozito'),
         ]
         return custom_urls + urls
     
@@ -3218,7 +3255,11 @@ class DepozitoAdmin(BaseSiteAdmin):
         
         class DepozitoHareketForm(forms.Form):
             hareket_tipi = forms.ChoiceField(
-                choices=[('ekleme', '➕ Ekleme (Depozitoya ekle)'), ('cikarma', '➖ Çıkarma (Depozitodan düş)')],
+                choices=[
+                    ('ekleme', '➕ Ekleme (Depozitoya ekle)'), 
+                    ('cikarma', '➖ Çıkarma (Depozitodan düş)'),
+                    ('ek_depozito', '💰 Ek Depozito'),
+                ],
                 widget=forms.Select(attrs={'class': 'form-control'})
             )
             tutar = forms.DecimalField(
@@ -3237,28 +3278,41 @@ class DepozitoAdmin(BaseSiteAdmin):
         if request.method == 'POST':
             form = DepozitoHareketForm(request.POST)
             if form.is_valid():
-                hareket = DepozitoHareket.objects.create(
-                    depozito=depozito,
-                    hareket_tipi=form.cleaned_data['hareket_tipi'],
-                    tutar=form.cleaned_data['tutar'],
-                    tarih=form.cleaned_data['tarih'],
-                    aciklama=form.cleaned_data['aciklama'] or f"{depozito.daire} - {'Ek depozito' if form.cleaned_data['hareket_tipi'] == 'ekleme' else 'Depozito düşümü'}"
-                )
+                hareket_tipi = form.cleaned_data['hareket_tipi']
+                tutar = form.cleaned_data['tutar']
+                tarih = form.cleaned_data['tarih']
+                aciklama = form.cleaned_data['aciklama']
                 
-                # Yeni bakiyeyi hesapla
-                toplam = float(depozito.tutar)
-                for h in DepozitoHareket.objects.filter(depozito=depozito):
-                    if h.hareket_tipi == 'ekleme':
-                        toplam += float(h.tutar)
-                    else:
-                        toplam -= float(h.tutar)
+                # Ek depozito ise özel işlem
+                if hareket_tipi == 'ek_depozito':
+                    depozito.ek_depozito_tutari = float(depozito.ek_depozito_tutari) + float(tutar)
+                    depozito.ek_depozito_odendi_mi = False
+                    depozito.ek_depozito_aciklama = aciklama or "Ek depozito eklendi"
+                    depozito.save()
+                    
+                    hareket = DepozitoHareket.objects.create(
+                        depozito=depozito,
+                        hareket_tipi='ek_depozito',
+                        tutar=tutar,
+                        tarih=tarih,
+                        aciklama=aciklama or f"{depozito.daire} - Ek depozito",
+                        ek_depozito_odendi_mi=False
+                    )
+                else:
+                    hareket = DepozitoHareket.objects.create(
+                        depozito=depozito,
+                        hareket_tipi=hareket_tipi,
+                        tutar=tutar,
+                        tarih=tarih,
+                        aciklama=aciklama or f"{depozito.daire} - {'Ek depozito' if hareket_tipi == 'ekleme' else 'Depozito düşümü'}"
+                    )
                 
                 messages.success(
                     request, 
                     f"✅ Depozito hareketi eklendi!\n"
-                    f"   İşlem: {'➕ Ekleme' if hareket.hareket_tipi == 'ekleme' else '➖ Çıkarma'}\n"
-                    f"   Tutar: {hareket.tutar} TL\n"
-                    f"   Yeni bakiye: {toplam:.2f} TL"
+                    f"   İşlem: {dict(form.fields['hareket_tipi'].choices)[hareket_tipi]}\n"
+                    f"   Tutar: {tutar} TL\n"
+                    f"   Yeni bakiye: {self.guncel_bakiye(depozito)}"
                 )
                 return HttpResponseRedirect(reverse('admin:bina_depozito_change', args=[depozito.id]))
         else:
@@ -3276,7 +3330,206 @@ class DepozitoAdmin(BaseSiteAdmin):
         }
         return render(request, 'admin/depozito_hareket_ekle.html', context)
     
-    actions = ['toplu_depozito_hareketi_ekle']
+    # ========== EK DEPOZİTO ÖDEME ==========
+    def ek_depozito_ode(self, request, depozito_id):
+        """Ek depozito ödeme işlemi"""
+        from .models import Depozito, DepozitoHareket, BankaHareket, Banka
+        from django.shortcuts import get_object_or_404, redirect, render
+        from django.urls import reverse
+        from datetime import date
+        
+        depozito = get_object_or_404(Depozito, id=depozito_id)
+        
+        if request.method == 'POST':
+            odeme_tutari = float(request.POST.get('odeme_tutari', 0))
+            odeme_tarihi = request.POST.get('odeme_tarihi', date.today())
+            
+            if odeme_tutari <= 0:
+                self.message_user(request, '❌ Lütfen geçerli bir tutar girin!', level='ERROR')
+                return redirect('admin:bina_depozito_change', depozito_id)
+            
+            # Ek depozito tutarını kontrol et
+            if odeme_tutari > float(depozito.ek_depozito_tutari):
+                self.message_user(
+                    request, 
+                    f'❌ Ödenecek tutar ({odeme_tutari:.2f} TL), ek depozito tutarından ({depozito.ek_depozito_tutari:.2f} TL) büyük olamaz!',
+                    level='ERROR'
+                )
+                return redirect('admin:bina_depozito_change', depozito_id)
+            
+            # Banka hareketi oluştur
+            ana_hesap = Banka.objects.filter(ana_hesap_mi=True).first()
+            if ana_hesap:
+                BankaHareket.objects.create(
+                    banka=ana_hesap,
+                    hareket_tipi='gelir',
+                    tutar=odeme_tutari,
+                    tarih=odeme_tarihi,
+                    aciklama=f"Ek depozito ödemesi - {depozito.daire}",
+                    kisi=depozito.kisi
+                )
+                ana_hesap.guncel_bakiye = float(ana_hesap.guncel_bakiye) + odeme_tutari
+                ana_hesap.save()
+            
+            # Depozitoyu güncelle
+            kalan_ek_depozito = float(depozito.ek_depozito_tutari) - odeme_tutari
+            depozito.ek_depozito_tutari = kalan_ek_depozito
+            
+            if kalan_ek_depozito == 0:
+                depozito.ek_depozito_odendi_mi = True
+                depozito.ek_depozito_odeme_tarihi = odeme_tarihi
+            
+            depozito.save()
+            
+            # Depozito hareketi oluştur (ödeme işlemi)
+            DepozitoHareket.objects.create(
+                depozito=depozito,
+                hareket_tipi='ekleme',
+                tutar=odeme_tutari,
+                tarih=odeme_tarihi,
+                aciklama=f"Ek depozito ödemesi - {odeme_tutari:.2f} TL",
+                ek_depozito_odendi_mi=True
+            )
+            
+            self.message_user(
+                request, 
+                f'✅ {odeme_tutari:.2f} TL ek depozito ödemesi alındı! '
+                f'Kalan: {kalan_ek_depozito:.2f} TL'
+            )
+            return redirect('admin:bina_depozito_change', depozito_id)
+        
+        # GET isteği - form göster
+        return render(request, 'admin/ek_depozito_ode.html', {
+            'title': f'Ek Depozito Ödeme - {depozito.daire}',
+            'depozito': depozito,
+            'today': date.today(),
+            'site_header': self.admin_site.site_header,
+        })
+    
+    # ========== TÜM DAİRELERE EK DEPOZİTO ==========
+    def tum_dairelere_ek_depozito(self, request):
+        """Tüm dairelere ek depozito yansıt"""
+        from .models import Daire, Depozito, DepozitoHareket
+        from django.shortcuts import render, redirect
+        from django.urls import reverse
+        from datetime import date
+        
+        if request.method == 'POST':
+            tutar = float(request.POST.get('tutar', 0))
+            aciklama = request.POST.get('aciklama', '')
+            
+            if tutar <= 0:
+                self.message_user(request, '❌ Lütfen geçerli bir tutar girin!', level='ERROR')
+                return redirect('admin:bina_depozito_changelist')
+            
+            eklenen = 0
+            hatali = 0
+            
+            # Tüm daireleri al (muaf olmayanlar)
+            daireler = Daire.objects.filter(isletme_giderlerinden_muaf=False)
+            
+            for daire in daireler:
+                try:
+                    # Dairenin depozitosunu bul veya oluştur
+                    depozito, created = Depozito.objects.get_or_create(
+                        daire=daire,
+                        durum='alindi',
+                        defaults={
+                            'kisi': daire.iliskiler.filter(aktif_mi=True, iliski_tipi='ev_sahibi').first().kisi if daire.iliskiler.filter(aktif_mi=True, iliski_tipi='ev_sahibi').exists() else None,
+                            'tutar': 0,
+                            'alinma_tarihi': date.today(),
+                        }
+                    )
+                    
+                    # Ek depozito tutarını güncelle
+                    depozito.ek_depozito_tutari = float(depozito.ek_depozito_tutari) + tutar
+                    depozito.ek_depozito_aciklama = aciklama
+                    depozito.ek_depozito_odendi_mi = False
+                    depozito.save()
+                    
+                    # Depozito hareketi oluştur
+                    DepozitoHareket.objects.create(
+                        depozito=depozito,
+                        hareket_tipi='ek_depozito',
+                        tutar=tutar,
+                        tarih=date.today(),
+                        aciklama=f"Ek depozito: {aciklama}" if aciklama else "Ek depozito yansıtıldı",
+                        ek_depozito_odendi_mi=False
+                    )
+                    eklenen += 1
+                except Exception as e:
+                    hatali += 1
+                    print(f"Hata: {e}")
+            
+            self.message_user(
+                request, 
+                f'✅ {eklenen} daireye {tutar:.2f} TL ek depozito yansıtıldı!'
+                f'{" ⚠️ " + str(hatali) + " dairede hata oluştu!" if hatali > 0 else ""}'
+            )
+            return redirect('admin:bina_depozito_changelist')
+        
+        # GET isteği - form göster
+        return render(request, 'admin/ek_depozito_form.html', {
+            'title': 'Tüm Dairelere Ek Depozito Yansıt',
+            'islem': 'tum',
+            'site_header': self.admin_site.site_header,
+        })
+    
+    # ========== SEÇİLİ DAİRELERE EK DEPOZİTO ==========
+    @admin.action(description='Seçili depozitolara ek depozito yansıt')
+    def secili_depozitolara_ek_depozito(self, request, queryset):
+        """Seçili depozitolara ek depozito yansıt"""
+        from .models import Depozito, DepozitoHareket
+        from django.shortcuts import render
+        from django.http import HttpResponseRedirect
+        from datetime import date
+        
+        if request.POST.get('apply'):
+            tutar = float(request.POST.get('tutar', 0))
+            aciklama = request.POST.get('aciklama', '')
+            
+            if tutar <= 0:
+                self.message_user(request, '❌ Lütfen geçerli bir tutar girin!', level='ERROR')
+                return HttpResponseRedirect(request.get_full_path())
+            
+            eklenen = 0
+            for depozito in queryset:
+                # Ek depozito tutarını güncelle
+                depozito.ek_depozito_tutari = float(depozito.ek_depozito_tutari) + tutar
+                depozito.ek_depozito_aciklama = aciklama
+                depozito.ek_depozito_odendi_mi = False
+                depozito.save()
+                
+                # Depozito hareketi oluştur
+                DepozitoHareket.objects.create(
+                    depozito=depozito,
+                    hareket_tipi='ek_depozito',
+                    tutar=tutar,
+                    tarih=date.today(),
+                    aciklama=f"Ek depozito: {aciklama}" if aciklama else "Ek depozito yansıtıldı",
+                    ek_depozito_odendi_mi=False
+                )
+                eklenen += 1
+            
+            self.message_user(
+                request, 
+                f'✅ {eklenen} depozitoya {tutar:.2f} TL ek depozito yansıtıldı!'
+            )
+            return HttpResponseRedirect(request.get_full_path())
+        
+        # Form göster
+        return render(request, 'admin/ek_depozito_form.html', {
+            'title': 'Seçili Depozitolara Ek Depozito Yansıt',
+            'islem': 'secili',
+            'queryset': queryset,
+            'site_header': self.admin_site.site_header,
+        })
+    
+    # ========== ACTIONS ==========
+    actions = [
+        'secili_depozitolara_ek_depozito',
+        'toplu_depozito_hareketi_ekle'
+    ]
     
     def toplu_depozito_hareketi_ekle(self, request, queryset):
         """Seçili depozitolara toplu hareket ekle"""
@@ -3287,7 +3540,11 @@ class DepozitoAdmin(BaseSiteAdmin):
         
         class TopluHareketForm(forms.Form):
             hareket_tipi = forms.ChoiceField(
-                choices=[('ekleme', '➕ Ekleme (Depozitoya ekle)'), ('cikarma', '➖ Çıkarma (Depozitodan düş)')]
+                choices=[
+                    ('ekleme', '➕ Ekleme (Depozitoya ekle)'), 
+                    ('cikarma', '➖ Çıkarma (Depozitodan düş)'),
+                    ('ek_depozito', '💰 Ek Depozito'),
+                ]
             )
             tutar = forms.DecimalField(max_digits=10, decimal_places=2)
             tarih = forms.DateField(initial=date.today)
@@ -3298,12 +3555,20 @@ class DepozitoAdmin(BaseSiteAdmin):
             if form.is_valid():
                 eklenen = 0
                 for depozito in queryset:
+                    # Ek depozito ise özel işlem
+                    if form.cleaned_data['hareket_tipi'] == 'ek_depozito':
+                        depozito.ek_depozito_tutari = float(depozito.ek_depozito_tutari) + float(form.cleaned_data['tutar'])
+                        depozito.ek_depozito_odendi_mi = False
+                        depozito.ek_depozito_aciklama = form.cleaned_data['aciklama'] or "Toplu ek depozito"
+                        depozito.save()
+                    
                     DepozitoHareket.objects.create(
                         depozito=depozito,
                         hareket_tipi=form.cleaned_data['hareket_tipi'],
                         tutar=form.cleaned_data['tutar'],
                         tarih=form.cleaned_data['tarih'],
-                        aciklama=form.cleaned_data['aciklama'] or f"Toplu işlem - {depozito.daire}"
+                        aciklama=form.cleaned_data['aciklama'] or f"Toplu işlem - {depozito.daire}",
+                        ek_depozito_odendi_mi=False
                     )
                     eklenen += 1
                 self.message_user(request, f"✅ {eklenen} depozitoya hareket eklendi.")
@@ -3319,6 +3584,53 @@ class DepozitoAdmin(BaseSiteAdmin):
         }
         return render(request, 'admin/toplu_depozito_hareketi.html', context)
     toplu_depozito_hareketi_ekle.short_description = "Seçili depozitolara toplu hareket ekle"
+
+    def changelist_view(self, request, extra_context=None):
+        """Depozito listesine özet bilgileri ekle"""
+        from django.db.models import Sum
+        from .models import Depozito, DepozitoHareket
+        
+        queryset = self.get_queryset(request)
+        
+        try:
+            from django.contrib.admin.views.main import ChangeList
+            cl = ChangeList(request, self.model, self.list_display, self.list_display_links,
+                            self.list_filter, self.date_hierarchy, self.search_fields,
+                            self.list_select_related, self.list_per_page, self.list_max_show_all,
+                            self.list_editable, self, self.sortable_by)
+            queryset = cl.get_queryset(request)
+        except:
+            pass
+        
+        # Ana depozito hesaplamaları
+        alinan = queryset.filter(durum='alindi').aggregate(Sum('tutar'))['tutar__sum'] or 0
+        iade = queryset.filter(durum='iade_edildi').aggregate(Sum('tutar'))['tutar__sum'] or 0
+        
+        # Ek depozito hesaplamaları
+        toplam_ek = queryset.aggregate(Sum('ek_depozito_tutari'))['ek_depozito_tutari__sum'] or 0
+        odenen_ek = queryset.filter(ek_depozito_odendi_mi=True).aggregate(Sum('ek_depozito_tutari'))['ek_depozito_tutari__sum'] or 0
+        bekleyen_ek = toplam_ek - odenen_ek
+        
+        # Toplam
+        toplam = alinan + toplam_ek
+        net = alinan - iade
+        
+        # Oran - DÜZELTİLDİ (oden_ek -> odenen_ek)
+        oran = (odenen_ek / toplam_ek * 100) if toplam_ek > 0 else 0
+        
+        extra_context = extra_context or {}
+        extra_context.update({
+            'alinan_depozito': alinan,
+            'iade_depozito': iade,
+            'net_depozito': net,
+            'toplam_ek_depozito': toplam_ek,
+            'odenen_ek_depozito': odenen_ek,
+            'bekleyen_ek_depozito': bekleyen_ek,
+            'toplam_depozito': toplam,
+            'ek_depozito_orani': oran,
+        })
+        
+        return super().changelist_view(request, extra_context=extra_context)
 
 class DepozitoHareketAdmin(BaseSiteAdmin):
     list_display = ('depozito', 'hareket_tipi', 'tutar', 'tarih', 'aciklama')
