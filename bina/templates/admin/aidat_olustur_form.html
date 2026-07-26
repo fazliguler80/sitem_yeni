@@ -1,0 +1,52 @@
+<!-- templates/admin/aidat_olustur_form.html -->
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block content %}
+<div id="content-main">
+    <div class="module" style="max-width: 600px; margin: 20px auto;">
+        <h2>{{ title }}</h2>
+        
+        <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin-bottom: 20px; border: 1px solid #ffc107;">
+            <strong>⚠️ Bilgi:</strong>
+            <ul style="margin: 10px 0 0 20px;">
+                <li><strong>{{ queryset.count }}</strong> daire için aidat oluşturulacaktır.</li>
+                <li>Aynı ay/yıl için daha önce aidat oluşturulmuşsa tekrar oluşturulmaz.</li>
+                <li>Site ayarlarındaki sabit aidat miktarı kullanılır.</li>
+            </ul>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-row" style="padding: 10px 0;">
+                <div style="display: inline-block; margin-right: 20px;">
+                    <label for="id_ay"><strong>Ay:</strong></label>
+                    <select name="ay" id="id_ay" style="padding: 5px 10px; margin-left: 10px; width: 80px;">
+                        {% for i in "123456789101112"|make_list %}
+                            <option value="{{ i }}" {% if i|add:0 == 7 %}selected{% endif %}>
+                                {{ i }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div style="display: inline-block;">
+                    <label for="id_yil"><strong>Yıl:</strong></label>
+                    <input type="number" name="yil" id="id_yil" value="2026" 
+                           style="padding: 5px 10px; margin-left: 10px; width: 100px;">
+                </div>
+            </div>
+            
+            <div class="submit-row" style="margin-top: 20px;">
+                <input type="submit" name="apply" value="Aidat Oluştur" class="default" 
+                       style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">
+                <a href="{% url 'admin:bina_aidat_changelist' %}" class="button" 
+                   style="background: #6c757d; color: white; padding: 10px 20px; border-radius: 4px; text-decoration: none; margin-left: 10px;">
+                    İptal
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

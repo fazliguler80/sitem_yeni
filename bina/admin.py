@@ -684,7 +684,98 @@ class AidatAdmin(TarihFiltresiMixin, BaseSiteAdmin):
             'fields': ('odeme_yapildi_mi', 'odeme_tarihi', 'kim_odedi', 'odeme_notu'),
         }),
     )
+
+    # ========== YENİ ACTION EKLEYİN (BURAYA) ==========
+    @admin.action(description='Tüm dairelere sabit aidat oluştur (Bu ay)')
+    def sabit_aidat_olustur(self, request, queryset):
+        """Tüm dairelere sabit aidat oluştur"""
+        from datetime import date
+        from bina.models import SiteAyarlari, Daire, Aidat
+        
+        site_ayar = SiteAyarlari.objects.first()
+        if not site_ayar:
+            self.message_user(request, '❌ Site ayarları bulunamadı!', level='ERROR')
+            return
+        
+        ay = date.today().month
+        yil = date.today().year
+        
+        # Bu ay için aidat var mı kontrol et
+        mevcut = Aidat.objects.filter(ay=ay, yil=yil, aidat_tipi='sabit')
+        if mevcut.exists():
+            self.message_user(request, f'⚠️ {ay}/{yil} için sabit aidat zaten oluşturulmuş!', level='WARNING')
+            return
+        
+        # Tüm dairelere aidat oluştur
+        daireler = Daire.objects.all()
+        olusturulan = 0
+        for daire in daireler:
+            Aidat.objects.create(
+                daire=daire,
+                ay=ay,
+                yil=yil,
+                aidat_tipi='sabit',
+                tutar=site_ayar.sabit_aidat_miktari,
+                aciklama=f"{ay}/{yil} Sabit Aidat - {site_ayar.sabit_aidat_miktari} TL"
+            )
+            olusturulan += 1
+        
+        self.message_user(request, f'✅ {olusturulan} daireye {ay}/{yil} sabit aidat oluşturuldu!')
+    # ==================================================
     
+    # ========== 2. ACTION: SEÇİLİ DAİRELERE (ÖZEL AY/YIL) ==========
+    @admin.action(description='Seçili dairelere sabit aidat oluştur (Özel Ay/Yıl)')
+    def sabit_aidat_olustur_ozel(self, request, queryset):
+        """Seçili dairelere özel ay/yıl için aidat oluştur"""
+        from bina.models import SiteAyarlari, Aidat
+        from django.shortcuts import render
+        from django.http import HttpResponseRedirect
+        from django.urls import reverse
+        from django import forms
+        from datetime import date
+        
+        if 'apply' in request.POST:
+            ay = int(request.POST.get('ay'))
+            yil = int(request.POST.get('yil'))
+            
+            site_ayar = SiteAyarlari.objects.first()
+            if not site_ayar:
+                self.message_user(request, '❌ Site ayarları bulunamadı!', level='ERROR')
+                return
+            
+            olusturulan = 0
+            for daire in queryset:
+                mevcut = Aidat.objects.filter(daire=daire, ay=ay, yil=yil, aidat_tipi='sabit')
+                if not mevcut.exists():
+                    Aidat.objects.create(
+                        daire=daire,
+                        ay=ay,
+                        yil=yil,
+                        aidat_tipi='sabit',
+                        tutar=site_ayar.sabit_aidat_miktari,
+                        aciklama=f"{ay}/{yil} Sabit Aidat - {site_ayar.sabit_aidat_miktari} TL"
+                    )
+                    olusturulan += 1
+            
+            self.message_user(request, f'✅ {olusturulan} daireye {ay}/{yil} sabit aidat oluşturuldu!')
+            return HttpResponseRedirect(request.get_full_path())
+        
+        # Form göster
+        class AidatForm(forms.Form):
+            ay = forms.ChoiceField(
+                choices=[(i, i) for i in range(1, 13)], 
+                initial=date.today().month,
+                label='Ay'
+            )
+            yil = forms.IntegerField(initial=date.today().year, label='Yıl')
+        
+        return render(request, 'admin/aidat_olustur_form.html', {
+            'queryset': queryset,
+            'form': AidatForm(),
+            'title': 'Seçili Dairelere Sabit Aidat Oluştur',
+            'site_header': self.admin_site.site_header,
+        })
+
     # bina/admin.py - AidatAdmin save_model metodu (depozito kısmı)
 
     def save_model(self, request, obj, form, change):
@@ -801,7 +892,7 @@ class AidatAdmin(TarihFiltresiMixin, BaseSiteAdmin):
     kim_odedi_bilgisi.short_description = "Ödeyen Kişi"
     kim_odedi_bilgisi.admin_order_field = 'kim_odedi__ad_soyad'
     
-    actions = ['toplu_odeme_yap', 'toplu_odeme_iptal', 'aidat_raporu_excel']
+    actions = ['sabit_aidat_olustur', 'sabit_aidat_olustur_ozel', 'toplu_odeme_yap', 'toplu_odeme_iptal', 'aidat_raporu_excel']
     
     def toplu_odeme_yap(self, request, queryset):
         """Seçili aidatları toplu ödeme yap"""
