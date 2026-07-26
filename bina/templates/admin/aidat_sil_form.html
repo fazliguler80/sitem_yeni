@@ -1,21 +1,18 @@
-<!-- templates/admin/aidat_olustur_form.html -->
+<!-- templates/admin/aidat_sil_form.html -->
 {% extends "admin/base_site.html" %}
 {% load i18n admin_urls %}
 
 {% block content %}
 <div id="content-main">
     <div class="module" style="max-width: 600px; margin: 20px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-        <h2>{{ title }}</h2>
+        <h2 style="color: #dc3545;">{{ title }}</h2>
         
-        <div style="background: #cce5ff; padding: 15px; border-radius: 5px; margin-bottom: 20px; border: 1px solid #b8daff;">
-            <strong>📋 Bilgi:</strong>
+        <div style="background: #f8d7da; padding: 15px; border-radius: 5px; margin-bottom: 20px; border: 1px solid #f5c6cb;">
+            <strong>⚠️ Bilgi:</strong>
             <ul style="margin: 10px 0 0 20px;">
-                <li><strong>{{ daire_sayisi }}</strong> daire için aidat oluşturulacaktır.</li>
-                {% if muaf_sayisi > 0 %}
-                    <li style="color: #ff9800;">⚠️ <strong>{{ muaf_sayisi }}</strong> daire muaf olduğu için atlanacaktır.</li>
-                {% endif %}
-                <li>Aynı ay/yıl için daha önce aidat oluşturulmuşsa tekrar oluşturulmaz.</li>
-                <li>Site ayarlarındaki sabit aidat miktarı kullanılır.</li>
+                <li><strong>{{ daire_sayisi }}</strong> dairenin aidatları silinecektir.</li>
+                <li>Sadece <strong>ödenmemiş</strong> aidatlar silinebilir.</li>
+                <li>Bu işlem <strong>GERİ ALINAMAZ!</strong></li>
             </ul>
         </div>
         
@@ -28,19 +25,7 @@
                     <select name="ay" id="id_ay" style="padding: 8px 15px; margin-left: 10px; border: 1px solid #ced4da; border-radius: 4px;">
                         {% for i in "123456789101112"|make_list %}
                             <option value="{{ i }}" {% if i|add:0 == 7 %}selected{% endif %}>
-                                {% if i == '1' %}Ocak
-                                {% elif i == '2' %}Şubat
-                                {% elif i == '3' %}Mart
-                                {% elif i == '4' %}Nisan
-                                {% elif i == '5' %}Mayıs
-                                {% elif i == '6' %}Haziran
-                                {% elif i == '7' %}Temmuz
-                                {% elif i == '8' %}Ağustos
-                                {% elif i == '9' %}Eylül
-                                {% elif i == '10' %}Ekim
-                                {% elif i == '11' %}Kasım
-                                {% elif i == '12' %}Aralık
-                                {% endif %}
+                                {{ i }}
                             </option>
                         {% endfor %}
                     </select>
@@ -54,8 +39,8 @@
             </div>
             
             <div class="submit-row" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #dee2e6;">
-                <input type="submit" name="apply" value="Aidat Oluştur" class="default" 
-                       style="background: #28a745; color: white; padding: 10px 30px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                <input type="submit" name="apply" value="Aidatları Sil" 
+                       style="background: #dc3545; color: white; padding: 10px 30px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
                 <a href="{% url 'admin:bina_aidat_changelist' %}" class="button" 
                    style="background: #6c757d; color: white; padding: 10px 30px; border-radius: 4px; text-decoration: none; margin-left: 10px;">
                     İptal

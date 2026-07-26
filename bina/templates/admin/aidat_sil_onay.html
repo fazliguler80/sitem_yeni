@@ -1,0 +1,35 @@
+<!-- templates/admin/aidat_sil_onay.html -->
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block content %}
+<div id="content-main">
+    <div class="module" style="max-width: 600px; margin: 20px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h2 style="color: #dc3545;">⚠️ Aidat Silme Onayı</h2>
+        
+        <div style="background: #f8d7da; padding: 15px; border-radius: 5px; margin: 20px 0; border: 1px solid #f5c6cb;">
+            <strong style="color: #721c24;">Dikkat!</strong>
+            <ul style="margin: 10px 0 0 20px; color: #721c24;">
+                <li><strong>{{ sayi }}</strong> adet sabit aidat silinecektir.</li>
+                <li>Dönem: <strong>{{ ay }}/{{ yil }}</strong></li>
+                <li>Bu işlem <strong>GERİ ALINAMAZ!</strong></li>
+                <li>Sadece ödenmemiş aidatlar silinebilir.</li>
+            </ul>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="confirm_delete" value="1">
+            
+            <div class="submit-row" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+                <input type="submit" value="Evet, Sil" 
+                       style="background: #dc3545; color: white; padding: 10px 30px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                <a href="{% url 'admin:bina_aidat_changelist' %}" class="button" 
+                   style="background: #6c757d; color: white; padding: 10px 30px; border-radius: 4px; text-decoration: none; margin-left: 10px;">
+                    Vazgeç
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
