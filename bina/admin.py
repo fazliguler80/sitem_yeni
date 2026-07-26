@@ -3159,30 +3159,32 @@ class DepozitoAdmin(BaseSiteAdmin):
     # ========== EK DEPOZITO TUTARI GOSTER ==========
     def ek_depozito_tutari_goster(self, obj):
         """Ek depozito tutarını göster"""
+        from django.utils.safestring import mark_safe
+        
         try:
-            tutar = float(obj.ek_depozito_tutari)
+            tutar = float(obj.ek_depozito_tutari if obj.ek_depozito_tutari else 0)
             if tutar > 0:
-                return format_html(
-                    '<span style="color: #17a2b8; font-weight: bold;">{:.2f} TL</span>',
-                    tutar
-                )
+                return mark_safe(f'<span style="color: #17a2b8; font-weight: bold;">{tutar:.2f} TL</span>')
         except:
             pass
-        return format_html('<span style="color: #6c757d;">-</span>')
+        return mark_safe('<span style="color: #6c757d;">-</span>')
     ek_depozito_tutari_goster.short_description = 'Ek Depozito'
     
     # ========== DURUM GOSTER ==========
     def durum_goster(self, obj):
         """Ek depozito durumunu göster"""
+        from django.utils.safestring import mark_safe
+        
         try:
-            if float(obj.ek_depozito_tutari) > 0:
+            tutar = float(obj.ek_depozito_tutari if obj.ek_depozito_tutari else 0)
+            if tutar > 0:
                 if obj.ek_depozito_odendi_mi:
-                    return format_html('<span style="color: #28a745;">✅ Ek Depozito Ödendi</span>')
+                    return mark_safe('<span style="color: #28a745;">✅ Ek Depozito Ödendi</span>')
                 else:
-                    return format_html('<span style="color: #ff9800;">⚠️ Ek Depozito Bekliyor: {} TL</span>', obj.ek_depozito_tutari)
+                    return mark_safe(f'<span style="color: #ff9800;">⚠️ Ek Depozito Bekliyor: {tutar:.2f} TL</span>')
         except:
             pass
-        return format_html('<span style="color: #6c757d;">➖ Ek Depozito Yok</span>')
+        return mark_safe('<span style="color: #6c757d;">➖ Ek Depozito Yok</span>')
     durum_goster.short_description = 'Ek Depozito Durumu'
     
     # ========== GUNCEL BAKIYE ==========
@@ -3223,18 +3225,20 @@ class DepozitoAdmin(BaseSiteAdmin):
     def hareket_ekle_button(self, obj):
         from django.utils.html import format_html
         from django.urls import reverse
+        from django.utils.safestring import mark_safe
+        
         url = reverse('admin:depozito_hareket_ekle', args=[obj.id])
         ek_depozito_url = reverse('admin:ek_depozito_ode', args=[obj.id])
         
         buttons = f'<a href="{url}" style="background:#28a745; color:white; padding:5px 10px; border-radius:3px; text-decoration:none; margin-right:5px;">➕ Hareket</a>'
         
         try:
-            if float(obj.ek_depozito_tutari) > 0 and not obj.ek_depozito_odendi_mi:
+            if float(obj.ek_depozito_tutari if obj.ek_depozito_tutari else 0) > 0 and not obj.ek_depozito_odendi_mi:
                 buttons += f' <a href="{ek_depozito_url}" style="background:#17a2b8; color:white; padding:5px 10px; border-radius:3px; text-decoration:none;">💰 Ek Depozito Öde</a>'
         except:
             pass
         
-        return format_html(buttons)
+        return mark_safe(buttons)
     hareket_ekle_button.short_description = 'İşlemler'
     hareket_ekle_button.allow_tags = True
 
@@ -3310,32 +3314,38 @@ class DepozitoAdmin(BaseSiteAdmin):
     def guncel_bakiye(self, obj):
         """Depozito güncel bakiyesini hesapla (ana + ek + hareketler)"""
         from .models import DepozitoHareket
+        from django.utils.safestring import mark_safe
         
-        toplam = float(obj.tutar)
-        
-        # Ek depozitoyu ekle (eğer ödendiyse)
-        if obj.ek_depozito_odendi_mi:
-            toplam += float(obj.ek_depozito_tutari)
-        
-        # Hareketleri ekle
-        hareketler = DepozitoHareket.objects.filter(depozito=obj)
-        for h in hareketler:
-            if h.hareket_tipi in ['ekleme', 'ek_depozito']:
-                toplam += float(h.tutar)
-            elif h.hareket_tipi in ['cikarma', 'iade']:
-                toplam -= float(h.tutar)
-        
-        # float'a çevir ve formatla
-        toplam = float(toplam)
-        
-        # Renkli gösterim
-        if toplam > 0:
-            return format_html('<span style="color: #28a745; font-weight: bold;">{:.2f} TL</span>', toplam)
-        elif toplam < 0:
-            return format_html('<span style="color: #dc3545; font-weight: bold;">{:.2f} TL</span>', toplam)
-        else:
-            return format_html('<span style="color: #6c757d;">{:.2f} TL</span>', toplam)
+        try:
+            # Tüm değerleri float'a çevir
+            toplam = float(obj.tutar)
+            
+            # Ek depozitoyu ekle (eğer ödendiyse)
+            if obj.ek_depozito_odendi_mi:
+                toplam += float(obj.ek_depozito_tutari if obj.ek_depozito_tutari else 0)
+            
+            # Hareketleri ekle
+            hareketler = DepozitoHareket.objects.filter(depozito=obj)
+            for h in hareketler:
+                if h.hareket_tipi in ['ekleme', 'ek_depozito']:
+                    toplam += float(h.tutar)
+                elif h.hareket_tipi in ['cikarma', 'iade']:
+                    toplam -= float(h.tutar)
+            
+            # float olduğundan emin ol
+            toplam = float(toplam)
+            
+            # Renkli gösterim - mark_safe kullan
+            if toplam > 0:
+                return mark_safe(f'<span style="color: #28a745; font-weight: bold;">{toplam:.2f} TL</span>')
+            elif toplam < 0:
+                return mark_safe(f'<span style="color: #dc3545; font-weight: bold;">{toplam:.2f} TL</span>')
+            else:
+                return mark_safe(f'<span style="color: #6c757d;">{toplam:.2f} TL</span>')
+        except Exception as e:
+            return mark_safe(f'<span style="color: #dc3545;">Hata</span>')
     guncel_bakiye.short_description = "Güncel Bakiye"
+    guncel_bakiye.allow_tags = True
     
     def get_urls(self):
         from django.urls import path
