@@ -164,6 +164,7 @@ def portal_depozito_gecmisi(request):
     # DEBUG - Context'i kontrol et
     print(f"📊 Context içindeki ek_depozito_borcu: {context['ek_depozito_borcu']}")
     
+    context['ek_depozito_borcu'] = 500.00  # Test için sabit değer
     return render(request, 'portal/depozito_gecmisi.html', context)
 
 
