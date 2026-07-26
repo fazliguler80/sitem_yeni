@@ -73,12 +73,12 @@ def portal_depozito_gecmisi(request):
             'gecmis_hareketler': [],
             'toplam_depozito': 0,
             'guncel_bakiye': 0,
-            'ek_depozito_borcu': 0,  # EKLENDİ
+            'ek_depozito_borcu': 0,
         }
         return render(request, 'portal/depozito_gecmisi.html', context)
     
     # ========== EK DEPOZİTO BORCU ==========
-    # Doğrudan model alanlarından oku
+    # Doğrudan model alanlarından oku - Decimal'i float'a çevir
     ek_tutar = float(depozito.ek_depozito_tutari) if depozito.ek_depozito_tutari else 0
     ek_odendi = depozito.ek_depozito_odendi_mi
     
@@ -88,7 +88,7 @@ def portal_depozito_gecmisi(request):
     else:
         ek_depozito_borcu = ek_tutar
     
-    # ===== DEBUG =====
+    # ===== DEBUG - KONSOLA YAZDIR =====
     print("=" * 50)
     print("🔍 DEPOZITO BORÇ BİLGİSİ")
     print(f"Daire: {daire}")
@@ -150,19 +150,19 @@ def portal_depozito_gecmisi(request):
             'yuvarlama_mi': h.gider is not None,
         })
     
+    # ========== CONTEXT - BURASI ÇOK ÖNEMLİ ==========
     context = {
         'daire': daire,
         'depozito': depozito,
         'depozito_var': True,
         'toplam_depozito': toplam_depozito,
         'guncel_bakiye': guncel_bakiye,
-        'ek_depozito_borcu': ek_depozito_borcu,  # BURASI ÇOK ÖNEMLİ!
+        'ek_depozito_borcu': ek_depozito_borcu,  # ← BURASI ÇOK ÖNEMLİ!
         'gecmis_hareketler': hareket_listesi,
     }
     
-    # DEBUG - Context'i yazdır
-    print(f"📊 Context: {context.keys()}")
-    print(f"   ek_depozito_borcu: {context['ek_depozito_borcu']}")
+    # DEBUG - Context'i kontrol et
+    print(f"📊 Context içindeki ek_depozito_borcu: {context['ek_depozito_borcu']}")
     
     return render(request, 'portal/depozito_gecmisi.html', context)
 
