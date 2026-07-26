@@ -1,0 +1,52 @@
+<!-- bina/templates/admin/ek_depozito_ode.html -->
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block content %}
+<div id="content-main">
+    <div class="module" style="max-width: 600px; margin: 20px auto; padding: 30px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h2>{{ title }}</h2>
+        
+        <div style="background: #e7f5ff; padding: 15px; border-radius: 5px; margin: 20px 0; border: 1px solid #b8daff;">
+            <strong>📊 Depozito Bilgileri:</strong>
+            <ul style="margin: 10px 0 0 20px;">
+                <li><strong>Daire:</strong> {{ depozito.daire }}</li>
+                <li><strong>Ana Depozito:</strong> {{ depozito.tutar|floatformat:2 }} TL</li>
+                <li><strong>Ek Depozito:</strong> {{ depozito.ek_depozito_tutari|floatformat:2 }} TL</li>
+                <li><strong>Toplam Bakiye:</strong> {{ depozito.guncel_bakiye|floatformat:2 }} TL</li>
+            </ul>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-row" style="padding: 15px 0;">
+                <div style="margin-bottom: 15px;">
+                    <label for="id_odeme_tutari" style="font-weight: bold; display: block; margin-bottom: 5px;">Ödeme Tutarı (TL):</label>
+                    <input type="number" name="odeme_tutari" id="id_odeme_tutari" 
+                           step="0.01" min="0.01" max="{{ depozito.ek_depozito_tutari }}" 
+                           value="{{ depozito.ek_depozito_tutari }}"
+                           style="padding: 8px 15px; width: 100%; border: 1px solid #ced4da; border-radius: 4px; box-sizing: border-box;">
+                    <small style="color: #666;">Maksimum: {{ depozito.ek_depozito_tutari|floatformat:2 }} TL</small>
+                </div>
+                
+                <div>
+                    <label for="id_odeme_tarihi" style="font-weight: bold; display: block; margin-bottom: 5px;">Ödeme Tarihi:</label>
+                    <input type="date" name="odeme_tarihi" id="id_odeme_tarihi" 
+                           value="{{ today|date:'Y-m-d' }}"
+                           style="padding: 8px 15px; width: 100%; border: 1px solid #ced4da; border-radius: 4px; box-sizing: border-box;">
+                </div>
+            </div>
+            
+            <div class="submit-row" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+                <input type="submit" value="✅ Ödeme Al" class="default" 
+                       style="background: #28a745; color: white; padding: 10px 30px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                <a href="{% url 'admin:bina_depozito_change' depozito.id %}" class="button" 
+                   style="background: #6c757d; color: white; padding: 10px 30px; border-radius: 4px; text-decoration: none; margin-left: 10px;">
+                    ❌ İptal
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

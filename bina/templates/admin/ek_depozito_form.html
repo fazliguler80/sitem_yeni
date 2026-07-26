@@ -1,0 +1,54 @@
+<!-- bina/templates/admin/ek_depozito_form.html -->
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block content %}
+<div id="content-main">
+    <div class="module" style="max-width: 600px; margin: 20px auto; padding: 30px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h2>{{ title }}</h2>
+        
+        <div style="background: #cce5ff; padding: 15px; border-radius: 5px; margin: 20px 0; border: 1px solid #b8daff;">
+            <strong>📋 Bilgi:</strong>
+            <ul style="margin: 10px 0 0 20px;">
+                {% if islem == 'tum' %}
+                    <li>Tüm dairelere ek depozito yansıtılacaktır.</li>
+                    <li>Muaf daireler otomatik olarak atlanacaktır.</li>
+                {% else %}
+                    <li><strong>{{ queryset.count }}</strong> daireye ek depozito yansıtılacaktır.</li>
+                {% endif %}
+                <li>Yansıtılan ek depozito, dairenin depozito bakiyesine eklenecektir.</li>
+                <li>Ödeme işlemi ayrıca yapılmalıdır.</li>
+            </ul>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-row" style="padding: 15px 0;">
+                <div style="margin-bottom: 15px;">
+                    <label for="id_tutar" style="font-weight: bold; display: block; margin-bottom: 5px;">Ek Depozito Tutarı (TL):</label>
+                    <input type="number" name="tutar" id="id_tutar" 
+                           step="0.01" min="0.01" 
+                           style="padding: 8px 15px; width: 100%; border: 1px solid #ced4da; border-radius: 4px; box-sizing: border-box;">
+                </div>
+                
+                <div>
+                    <label for="id_aciklama" style="font-weight: bold; display: block; margin-bottom: 5px;">Açıklama:</label>
+                    <textarea name="aciklama" id="id_aciklama" 
+                              style="padding: 8px 15px; width: 100%; border: 1px solid #ced4da; border-radius: 4px; box-sizing: border-box; min-height: 80px;"
+                              placeholder="Ek depozito açıklaması..."></textarea>
+                </div>
+            </div>
+            
+            <div class="submit-row" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+                <input type="submit" name="apply" value="✅ Ek Depozito Yansıt" class="default" 
+                       style="background: #17a2b8; color: white; padding: 10px 30px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                <a href="{% url 'admin:bina_depozito_changelist' %}" class="button" 
+                   style="background: #6c757d; color: white; padding: 10px 30px; border-radius: 4px; text-decoration: none; margin-left: 10px;">
+                    ❌ İptal
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
