@@ -3455,11 +3455,12 @@ class DepozitoAdmin(BaseSiteAdmin):
         from django.shortcuts import get_object_or_404, redirect, render
         from django.urls import reverse
         from datetime import date
+        from decimal import Decimal
         
         depozito = get_object_or_404(Depozito, id=depozito_id)
         
         if request.method == 'POST':
-            odeme_tutari = float(request.POST.get('odeme_tutari', 0))
+            odeme_tutari = Decimal(str(request.POST.get('odeme_tutari', 0)))
             odeme_tarihi = request.POST.get('odeme_tarihi', date.today())
             
             if odeme_tutari <= 0:
@@ -3467,10 +3468,11 @@ class DepozitoAdmin(BaseSiteAdmin):
                 return redirect('admin:bina_depozito_change', depozito_id)
             
             # Ek depozito tutarını kontrol et
-            if odeme_tutari > float(depozito.ek_depozito_tutari):
+            ek_tutar = Decimal(str(depozito.ek_depozito_tutari))
+            if odeme_tutari > ek_tutar:
                 self.message_user(
                     request, 
-                    f'❌ Ödenecek tutar ({odeme_tutari:.2f} TL), ek depozito tutarından ({depozito.ek_depozito_tutari:.2f} TL) büyük olamaz!',
+                    f'❌ Ödenecek tutar ({odeme_tutari:.2f} TL), ek depozito tutarından ({ek_tutar:.2f} TL) büyük olamaz!',
                     level='ERROR'
                 )
                 return redirect('admin:bina_depozito_change', depozito_id)
@@ -3486,11 +3488,12 @@ class DepozitoAdmin(BaseSiteAdmin):
                     aciklama=f"Ek depozito ödemesi - {depozito.daire}",
                     kisi=depozito.kisi
                 )
-                ana_hesap.guncel_bakiye = float(ana_hesap.guncel_bakiye) + odeme_tutari
+                # Decimal ile toplama
+                ana_hesap.guncel_bakiye = Decimal(str(ana_hesap.guncel_bakiye)) + odeme_tutari
                 ana_hesap.save()
             
             # Depozitoyu güncelle
-            kalan_ek_depozito = float(depozito.ek_depozito_tutari) - odeme_tutari
+            kalan_ek_depozito = ek_tutar - odeme_tutari
             depozito.ek_depozito_tutari = kalan_ek_depozito
             
             if kalan_ek_depozito == 0:
