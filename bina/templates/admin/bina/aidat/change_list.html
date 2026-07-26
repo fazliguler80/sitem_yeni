@@ -1,5 +1,34 @@
 {% extends "admin/change_list.html" %}
 
+{% block object-tools-items %}
+    {{ block.super }}
+    <!-- Sabit Aidat Butonları -->
+    <li style="display: inline-block; margin-right: 5px;">
+        <a href="bu-ay-aidat-olustur/" class="addlink" 
+           style="background: #28a745; color: white; padding: 8px 15px; border-radius: 4px; text-decoration: none; display: inline-block; font-weight: bold;">
+            📅 Bu Ay Oluştur
+        </a>
+    </li>
+    <li style="display: inline-block; margin-right: 5px;">
+        <a href="ozel-ay-aidat-olustur/" class="addlink" 
+           style="background: #17a2b8; color: white; padding: 8px 15px; border-radius: 4px; text-decoration: none; display: inline-block; font-weight: bold;">
+            📆 Özel Ay Oluştur
+        </a>
+    </li>
+    <li style="display: inline-block; margin-right: 5px;">
+        <a href="bu-ay-aidat-sil/" class="deletelink" 
+           style="background: #dc3545; color: white; padding: 8px 15px; border-radius: 4px; text-decoration: none; display: inline-block; font-weight: bold;">
+            🗑️ Bu Ay Sil
+        </a>
+    </li>
+    <li style="display: inline-block;">
+        <a href="ozel-ay-aidat-sil/" class="deletelink" 
+           style="background: #dc3545; color: white; padding: 8px 15px; border-radius: 4px; text-decoration: none; display: inline-block; font-weight: bold;">
+            🗑️ Özel Ay Sil
+        </a>
+    </li>
+{% endblock %}
+
 {% block content %}
     <!-- Özet Kartları (Tablonun Üstünde) -->
     <div style="margin-bottom: 20px; padding: 15px; background: #fff; border: 1px solid #ddd; border-radius: 5px;">
@@ -19,7 +48,43 @@
                 <p style="margin: 0; font-size: 22px; font-weight: bold; color: #721c24;">{{ toplam_odenmemis|floatformat:2 }} TL</p>
             </div>
         </div>
+        
+        <!-- Butonlar için küçük bir açıklama -->
+        <div style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px; font-size: 13px; color: #666;">
+            <strong>💡 İpuçları:</strong>
+            <ul style="margin: 5px 0 0 20px;">
+                <li><strong>📅 Bu Ay Oluştur</strong> → İçinde bulunduğumuz ay için tüm dairelere sabit aidat ekler.</li>
+                <li><strong>📆 Özel Ay Oluştur</strong> → Seçeceğiniz ay/yıl için tüm dairelere sabit aidat ekler.</li>
+                <li><strong>🗑️ Bu Ay Sil</strong> → İçinde bulunduğumuz ayın tüm sabit aidatlarını siler.</li>
+                <li><strong>🗑️ Özel Ay Sil</strong> → Seçeceğiniz ay/yılın tüm sabit aidatlarını siler.</li>
+                <li style="color: #dc3545;">⚠️ Muaf daireler otomatik olarak atlanır. Ödenmiş aidatlar silinemez.</li>
+            </ul>
+        </div>
     </div>
     
     {{ block.super }}
+{% endblock %}
+
+{% block extrahead %}
+    {{ block.super }}
+    <style>
+        /* Butonların hover efekti */
+        .object-tools li a.addlink:hover {
+            opacity: 0.8;
+        }
+        .object-tools li a.deletelink:hover {
+            opacity: 0.8;
+        }
+        /* Mobil uyum */
+        @media (max-width: 768px) {
+            .object-tools li {
+                display: block !important;
+                margin-bottom: 5px !important;
+            }
+            .object-tools li a {
+                width: 100%;
+                text-align: center;
+            }
+        }
+    </style>
 {% endblock %}
