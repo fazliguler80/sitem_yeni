@@ -1,0 +1,70 @@
+<!-- bina/templates/admin/toplu_depozito_hareketi.html -->
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block content %}
+<div id="content-main">
+    <div class="module" style="max-width: 600px; margin: 20px auto; padding: 30px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h2>{{ title }}</h2>
+        
+        <div style="background: #cce5ff; padding: 15px; border-radius: 5px; margin: 20px 0; border: 1px solid #b8daff;">
+            <strong>📋 Bilgi:</strong>
+            <ul style="margin: 10px 0 0 20px;">
+                <li><strong>{{ queryset.count }}</strong> depozitoya hareket eklenecektir.</li>
+                <li>Hareket tipi seçin ve tutarı girin.</li>
+                <li>Ek depozito seçeneği ile doğrudan ek depozito ekleyebilirsiniz.</li>
+            </ul>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-row" style="padding: 15px 0;">
+                <!-- Hareket Tipi -->
+                <div style="margin-bottom: 15px;">
+                    <label for="id_hareket_tipi" style="font-weight: bold; display: block; margin-bottom: 5px;">Hareket Tipi:</label>
+                    <select name="hareket_tipi" id="id_hareket_tipi" 
+                            style="padding: 8px 15px; width: 100%; border: 1px solid #ced4da; border-radius: 4px; box-sizing: border-box;">
+                        <option value="ekleme">➕ Ekleme (Depozitoya ekle)</option>
+                        <option value="cikarma">➖ Çıkarma (Depozitodan düş)</option>
+                        <option value="ek_depozito">💰 Ek Depozito</option>
+                    </select>
+                </div>
+                
+                <!-- Tutar -->
+                <div style="margin-bottom: 15px;">
+                    <label for="id_tutar" style="font-weight: bold; display: block; margin-bottom: 5px;">Tutar (TL):</label>
+                    <input type="number" name="tutar" id="id_tutar" 
+                           step="0.01" min="0.01" 
+                           style="padding: 8px 15px; width: 100%; border: 1px solid #ced4da; border-radius: 4px; box-sizing: border-box;">
+                </div>
+                
+                <!-- Tarih -->
+                <div style="margin-bottom: 15px;">
+                    <label for="id_tarih" style="font-weight: bold; display: block; margin-bottom: 5px;">İşlem Tarihi:</label>
+                    <input type="date" name="tarih" id="id_tarih" 
+                           value="{{ today|date:'Y-m-d' }}"
+                           style="padding: 8px 15px; width: 100%; border: 1px solid #ced4da; border-radius: 4px; box-sizing: border-box;">
+                </div>
+                
+                <!-- Açıklama -->
+                <div>
+                    <label for="id_aciklama" style="font-weight: bold; display: block; margin-bottom: 5px;">Açıklama:</label>
+                    <textarea name="aciklama" id="id_aciklama" 
+                              style="padding: 8px 15px; width: 100%; border: 1px solid #ced4da; border-radius: 4px; box-sizing: border-box; min-height: 80px;"
+                              placeholder="İşlem açıklaması..."></textarea>
+                </div>
+            </div>
+            
+            <div class="submit-row" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+                <input type="submit" name="apply" value="✅ Hareket Ekle" class="default" 
+                       style="background: #28a745; color: white; padding: 10px 30px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                <a href="{% url 'admin:bina_depozito_changelist' %}" class="button" 
+                   style="background: #6c757d; color: white; padding: 10px 30px; border-radius: 4px; text-decoration: none; margin-left: 10px;">
+                    ❌ İptal
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
